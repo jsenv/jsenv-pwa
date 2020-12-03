@@ -12,9 +12,13 @@
 */
 
 /* globals self, config */
+self.importScripts("./service-worker.util.js")
+/* globals util */
 
-const { jsenvBuildUrls = [] } = self
-if (!Array.isArray(jsenvBuildUrls)) {
+const { jsenvBuildUrls } = self
+if (jsenvBuildUrls === undefined) {
+  self.jsenvBuildUrls = []
+} else if (!Array.isArray(jsenvBuildUrls)) {
   throw new TypeError(`self.jsenvBuildUrls should be an array, got ${jsenvBuildUrls}`)
 }
 
@@ -82,17 +86,19 @@ if (typeof disableNavigationPreload !== "boolean") {
   )
 }
 
+const logger = util.createLogger({ logsEnabled, logsBackgroundColor })
+
 const urlsToCacheOnInstall = [...self.jsenvBuildUrls, ...config.extraUrlsToCacheOnInstall].map(
-  resolveUrl,
+  util.resolveUrl,
 )
 const urlMapping = {}
 Object.keys(urlMap).forEach((key) => {
-  urlMapping[resolveUrl(key)] = resolveUrl(urlMap[key])
+  urlMapping[util.resolveUrl(key)] = util.resolveUrl(urlMap[key])
 })
 
 // --- installation phase ---
 const install = async () => {
-  info("install start")
+  logger.info("install start")
   try {
     const total = urlsToCacheOnInstall.length
     let installed = 0
@@ -104,13 +110,13 @@ const install = async () => {
           const responseInCache = await caches.match(request)
 
           if (responseInCache) {
-            const shouldReload = responseCacheIsValid(responseInCache)
+            const shouldReload = util.responseCacheIsValid(responseInCache)
               ? false
               : config.shouldReloadOnInstall(responseInCache, request, {
                   requestWasCachedOnInstall: urlsToCacheOnInstall.includes(request.url),
                 })
             if (shouldReload) {
-              info(`${request.url} in cache but should be reloaded`)
+              logger.info(`${request.url} in cache but should be reloaded`)
               const requestByPassingCache = new Request(url, { cache: "reload" })
               await fetchAndCache(requestByPassingCache, {
                 oncache: () => {
@@ -118,7 +124,7 @@ const install = async () => {
                 },
               })
             } else {
-              info(`${request.url} already in cache`)
+              logger.info(`${request.url} already in cache`)
               installed += 1
             }
           } else {
@@ -129,17 +135,17 @@ const install = async () => {
             })
           }
         } catch (e) {
-          warn(`cannot put ${url} in cache due to error while fetching: ${e.stack}`)
+          logger.warn(`cannot put ${url} in cache due to error while fetching: ${e.stack}`)
         }
       }),
     )
     if (installed === total) {
-      info(`install done (${total} urls added in cache)`)
+      logger.info(`install done (${total} urls added in cache)`)
     } else {
-      info(`install done (${installed}/${total} urls added in cache)`)
+      logger.info(`install done (${installed}/${total} urls added in cache)`)
     }
   } catch (error) {
-    error(`install error: ${error.stack}`)
+    logger.error(`install error: ${error.stack}`)
   }
 }
 
@@ -149,25 +155,25 @@ self.addEventListener("install", (installEvent) => {
 
 // --- fetch implementation ---
 const handleRequest = async (request, fetchEvent) => {
-  info(`received fetch event for ${request.url}`)
+  logger.info(`received fetch event for ${request.url}`)
   try {
     const responseFromCache = await caches.match(request)
     if (responseFromCache) {
-      info(`respond with response from cache for ${request.url}`)
+      logger.info(`respond with response from cache for ${request.url}`)
       return responseFromCache
     }
 
     const responsePreloaded = await fetchEvent.preloadResponse
     if (responsePreloaded) {
-      info(`respond with preloaded response for ${request.url}`)
+      logger.info(`respond with preloaded response for ${request.url}`)
       return responsePreloaded
     }
   } catch (error) {
-    warn(`error while trying to use cache for ${request.url}`, error.stack)
+    logger.warn(`error while trying to use cache for ${request.url}`, error.stack)
     return fetch(request)
   }
 
-  info(`no cache for ${request.url}, fetching it`)
+  logger.info(`no cache for ${request.url}, fetching it`)
   return fetchAndCache(request)
 }
 
@@ -196,10 +202,10 @@ self.addEventListener("fetch", (fetchEvent) => {
 
 // --- activation phase ---
 const activate = async () => {
-  info("activate start")
+  logger.info("activate start")
 
   await Promise.all([enableNavigationPreloadIfPossible(), deleteOtherUrls(), deleteOtherCaches()])
-  info("activate done")
+  logger.info("activate done")
 }
 
 const enableNavigationPreloadIfPossible = async () => {
@@ -219,7 +225,7 @@ const deleteOtherUrls = async () => {
           requestWasCachedOnInstall: urlsToCacheOnInstall.includes(requestInCache.url),
         })
       ) {
-        info(`delete ${requestInCache.url}`)
+        logger.info(`delete ${requestInCache.url}`)
         await cache.delete(requestInCache)
       }
     }),
@@ -231,7 +237,7 @@ const deleteOtherCaches = async () => {
   await Promise.all(
     cacheKeys.map(async (cacheKey) => {
       if (cacheKey !== config.cacheName && config.shouldCleanOtherCacheOnActivate(cacheKey)) {
-        info(`delete cache ${cacheKey}`)
+        logger.info(`delete cache ${cacheKey}`)
         await caches.delete(cacheKey)
       }
     }),
@@ -293,37 +299,8 @@ self.addEventListener("message", async (messageEvent) => {
 })
 
 // ---- utils ----
-const createLogMethod = (method) =>
-  config.logsEnabled ? (...args) => console[method](...prefixArgs(...args)) : () => {}
-const info = createLogMethod("info")
-// const debug = createLogMethod("debug")
-const warn = createLogMethod("warn")
-// const error = createLogMethod("error")
-
-const prefixArgs = (...args) => {
-  return [
-    `%csw`,
-    `background: ${config.logsBackgroundColor}; color: black; padding: 1px 3px; margin: 0 1px`,
-    ...args,
-  ]
-}
 
 const caches = self.caches
-
-const fetchUsingNetwork = async (request) => {
-  const controller = new AbortController()
-  const { signal } = controller
-
-  try {
-    const response = await fetch(request, { signal })
-    return response
-  } catch (e) {
-    // abort request in any case
-    // I don't know how useful this is ?
-    controller.abort()
-    throw e
-  }
-}
 
 let cache
 const getCache = async () => {
@@ -333,10 +310,10 @@ const getCache = async () => {
 }
 
 const fetchAndCache = async (request, { oncache } = {}) => {
-  const [response, cache] = await Promise.all([fetchUsingNetwork(request), getCache()])
+  const [response, cache] = await Promise.all([util.fetchUsingNetwork(request), getCache()])
 
   if (response.status === 200) {
-    info(`fresh response found for ${request.url}, put it in cache and respond with it`)
+    logger.info(`fresh response found for ${request.url}, put it in cache and respond with it`)
 
     const cacheWrittenPromise = cache.put(request, response.clone())
     if (oncache) {
@@ -346,52 +323,6 @@ const fetchAndCache = async (request, { oncache } = {}) => {
 
     return response
   }
-  info(`cannot put ${request.url} in cache due to response status (${response.status})`)
+  logger.info(`cannot put ${request.url} in cache due to response status (${response.status})`)
   return response
 }
-
-const responseCacheIsValid = (responseInCache) => {
-  const cacheControlResponseHeader = responseInCache.headers.get("cache-control")
-  const maxAge = parseMaxAge(cacheControlResponseHeader)
-  return maxAge && maxAge > 0
-}
-
-// https://github.com/tusbar/cache-control
-const parseMaxAge = (cacheControlHeader) => {
-  if (!cacheControlHeader || cacheControlHeader.length === 0) return null
-
-  const HEADER_REGEXP = /([a-zA-Z][a-zA-Z_-]*)\s*(?:=(?:"([^"]*)"|([^ \t",;]*)))?/g
-  const matches = cacheControlHeader.match(HEADER_REGEXP) || []
-
-  const values = {}
-  Array.from(matches).forEach((match) => {
-    const tokens = match.split("=", 2)
-
-    const [key] = tokens
-    let value = null
-
-    if (tokens.length > 1) {
-      value = tokens[1].trim()
-    }
-
-    values[key.toLowerCase()] = value
-  })
-
-  return parseDuration(values["max-age"])
-}
-
-const parseDuration = (value) => {
-  if (!value) {
-    return null
-  }
-
-  const duration = Number.parseInt(value, 10)
-
-  if (!Number.isFinite(duration) || duration < 0) {
-    return null
-  }
-
-  return duration
-}
-
-const resolveUrl = (string) => String(new URL(string, self.location))
