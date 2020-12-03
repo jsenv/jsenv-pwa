@@ -14,7 +14,7 @@ export const listenInstallPromptAvailable = (callback) => {
     const onbeforeinstallprompt = (beforeinstallpromptEvent) => {
       beforeinstallpromptEvent.preventDefault()
       const prompt = beforeInstallPromptEventToPrompt(beforeinstallpromptEvent)
-      callback({ prompt })
+      callback(prompt)
     }
 
     window.addEventListener("beforeinstallprompt", onbeforeinstallprompt)
@@ -40,7 +40,10 @@ export const listenInstallPromptAvailable = (callback) => {
   }
 }
 
-const beforeInstallPromptEventToPrompt = async (beforeinstallpromptEvent, onaccept = () => {}) => {
+const beforeInstallPromptEventToPrompt = (
+  beforeinstallpromptEvent,
+  onaccept = () => {},
+) => async () => {
   beforeinstallpromptEvent.prompt()
   const choiceResult = await beforeinstallpromptEvent.userChoice
   if (choiceResult.outcome === "accepted") {

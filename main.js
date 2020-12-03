@@ -2,6 +2,7 @@ export { checkNavigatorControllerUpdate } from "./src/checkNavigatorControllerUp
 export { listenAppInstalled } from "./src/listenAppInstalled.js"
 export { listenDisplayMode } from "./src/listenDisplayMode.js"
 export { listenInstallPromptAvailable } from "./src/listenInstallPromptAvailable.js"
+export { listenNavigatorController } from "./src/listenNavigatorController.js"
 export { listenNavigatorControllerUpdateAvailable } from "./src/listenNavigatorControllerUpdateAvailable.js"
 export { registerServiceWorker } from "./src/registerServiceWorker.js"
 export { sendMessageToNavigatorController } from "./src/sendMessageToNavigatorController.js"
