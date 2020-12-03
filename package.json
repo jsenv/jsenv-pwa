@@ -35,7 +35,7 @@
     "upload-coverage": "node ./script/upload-coverage/upload-coverage.js",
     "generate-comment-example": "node ./docs/generate-comment-example.js",
     "generate-import-map": "node ./script/generate-import-map/generate-import-map.js",
-    "dist": "npm run generate-commonjs-bundle",
+    "dist": "",
     "postinstall": "npm run generate-import-map",
     "prepublishOnly": "node ./script/transform-package/remove-postinstall.js && npm run dist",
     "postpublish": "node ./script/transform-package/restore-postinstall.js"
@@ -43,15 +43,14 @@
   "dependencies": {},
   "devDependencies": {
     "@jsenv/assert": "2.2.1",
-    "@jsenv/codecov-upload": "3.4.2",
-    "@jsenv/core": "14.2.1",
-    "@jsenv/eslint-config": "12.5.0",
-    "@jsenv/git-hooks": "1.3.3",
-    "@jsenv/node-module-import-map": "12.0.1",
+    "@jsenv/codecov-upload": "3.4.3",
+    "@jsenv/core": "17.0.1",
+    "@jsenv/eslint-config": "12.8.0",
+    "@jsenv/node-module-import-map": "12.2.1",
     "@jsenv/github-release-package": "1.2.2",
     "@jsenv/package-publish": "1.5.1",
     "@jsenv/prettier-check-project": "5.6.1",
-    "eslint": "7.9.0",
-    "prettier": "2.1.1"
+    "eslint": "7.14.0",
+    "prettier": "2.2.1"
   }
 }
