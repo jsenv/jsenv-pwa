@@ -1,7 +1,7 @@
 {
   "name": "@jsenv/pwa",
   "version": "1.0.0",
-  "description": "TODO.",
+  "description": "Service worker and other progressive web application helpers.",
   "license": "MIT",
   "repository": {
     "type": "git",
