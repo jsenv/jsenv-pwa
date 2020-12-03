@@ -1,8 +1,7 @@
-import { reportFileSizeImpact, raw, gzip, brotli, readGithubWorkflowEnv } from "../../../index.js"
+import { reportFileSizeImpact, raw, readGithubWorkflowEnv } from "@jsenv/file-size-impact"
 
 reportFileSizeImpact({
   ...readGithubWorkflowEnv(),
-  logLevel: "debug",
   buildCommand: "npm run dist",
   trackingConfig: {
     src: {
