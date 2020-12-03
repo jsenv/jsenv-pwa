@@ -8,7 +8,11 @@ export const listenDisplayModeStandalone = (callback) => {
     callback(displayModeIsStandaloneGetter())
   }
   checkDisplayMode()
-  window.matchMedia("(display-mode: standalone)").addListener(checkDisplayMode)
+  const media = window.matchMedia("(display-mode: standalone)")
+  media.addListener(checkDisplayMode)
+  return () => {
+    media.removeListener(checkDisplayMode)
+  }
 }
 
 export const displayModeIsStandaloneGetter = () => {
