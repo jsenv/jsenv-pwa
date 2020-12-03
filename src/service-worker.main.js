@@ -185,6 +185,8 @@ const getUtil = () => {
       return duration
     }
   }
+
+  return util
 }
 
 assertContextLooksGood()
