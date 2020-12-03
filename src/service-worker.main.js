@@ -9,91 +9,195 @@
  * https://deanhume.com/displaying-a-new-version-available-progressive-web-app/
  * https://raw.githubusercontent.com/GoogleChromeLabs/sw-precache/master/service-worker.tmpl
  *
+ * Do not use relative self.importScripts in there because
+ * They are resolved against self.location. It means
+ * ./file.js would be resoled against the project root
 */
 
 /* globals self, config */
-self.importScripts("./service-worker.util.js")
-/* globals util */
 
-const { jsenvBuildUrls } = self
-if (jsenvBuildUrls === undefined) {
-  self.jsenvBuildUrls = []
-} else if (!Array.isArray(jsenvBuildUrls)) {
-  throw new TypeError(`self.jsenvBuildUrls should be an array, got ${jsenvBuildUrls}`)
+const assertContextLooksGood = () => {
+  const { jsenvBuildUrls } = self
+  if (jsenvBuildUrls === undefined) {
+    self.jsenvBuildUrls = []
+  } else if (!Array.isArray(jsenvBuildUrls)) {
+    throw new TypeError(`self.jsenvBuildUrls should be an array, got ${jsenvBuildUrls}`)
+  }
+
+  if (typeof config === undefined) {
+    throw new Error(`config is not in scope, be sure to import sw.preconfig.js before sw.jsenv.js`)
+  }
+
+  const { cacheName } = config
+  if (typeof cacheName !== "string") {
+    throw new TypeError(`config.cacheName should be a string, got ${cacheName}`)
+  }
+
+  const { extraUrlsToCacheOnInstall } = config
+  if (!Array.isArray(extraUrlsToCacheOnInstall)) {
+    throw new TypeError(
+      `config.extraUrlsToCacheOnInstall should be an array, got ${extraUrlsToCacheOnInstall}`,
+    )
+  }
+
+  const { urlMap } = config
+  if (typeof urlMap !== "object") {
+    throw new TypeError(`config.urlMap should be an object, got ${urlMap}`)
+  }
+
+  const { shouldReloadOnInstall } = config
+  if (typeof shouldReloadOnInstall !== "function") {
+    throw new TypeError(
+      `config.shouldReloadOnInstall should be a function, got ${shouldReloadOnInstall}`,
+    )
+  }
+
+  const { shouldCleanOnActivate } = config
+  if (typeof shouldCleanOnActivate !== "function") {
+    throw new TypeError(
+      `config.shouldCleanOnActivate should be a function, got ${shouldCleanOnActivate}`,
+    )
+  }
+
+  const { shouldCleanOtherCacheOnActivate } = config
+  if (typeof shouldCleanOtherCacheOnActivate !== "function") {
+    throw new TypeError(
+      `config.shouldCleanOtherCacheOnActivate should be a function, got ${shouldCleanOtherCacheOnActivate}`,
+    )
+  }
+
+  const { shouldHandleRequest } = config
+  if (typeof shouldHandleRequest !== "function") {
+    throw new TypeError(
+      `config.shouldHandleRequest should be a function, got ${shouldHandleRequest}`,
+    )
+  }
+
+  const { logsEnabled } = config
+  if (typeof logsEnabled !== "boolean") {
+    throw new TypeError(`config.logsEnabled should be a boolean, got ${logsEnabled}`)
+  }
+
+  const { logsBackgroundColor } = config
+  if (typeof logsBackgroundColor !== "string") {
+    throw new TypeError(`config.logsBackgroundColor should be a string, got ${logsBackgroundColor}`)
+  }
+
+  const { disableNavigationPreload } = config
+  if (typeof disableNavigationPreload !== "boolean") {
+    throw new TypeError(
+      `config.disableNavigationPreload should be a boolean, got ${disableNavigationPreload}`,
+    )
+  }
 }
 
-if (typeof config === undefined) {
-  throw new Error(`config is not in scope, be sure to import sw.preconfig.js before sw.jsenv.js`)
+/*
+ * util is an object holding utility functions.
+ * The utility concept was added just to structure a bit this file.
+ * When a utility need private helpers function, it's wrapped in {}
+ * to highlight that thoose are private functions
+ * The {} pattern was choosed because it allows to have private helpers
+ * such as parseMaxAge. Not possible to do that with a plain object.
+ */
+
+const getUtil = () => {
+  const util = {}
+
+  util.createLogger = ({ logsEnabled, logsBackgroundColor }) => {
+    const prefixArgs = (...args) => {
+      return [
+        `%csw`,
+        `background: ${logsBackgroundColor}; color: black; padding: 1px 3px; margin: 0 1px`,
+        ...args,
+      ]
+    }
+
+    const createLogMethod = (method) =>
+      logsEnabled ? (...args) => console[method](...prefixArgs(...args)) : () => {}
+
+    return {
+      // debug: createLogMethod("debug"),
+      info: createLogMethod("info"),
+      warn: createLogMethod("warn"),
+      error: createLogMethod("error"),
+    }
+  }
+
+  util.resolveUrl = (string) => String(new URL(string, self.location))
+
+  util.fetchUsingNetwork = async (request) => {
+    const controller = new AbortController()
+    const { signal } = controller
+
+    try {
+      const response = await fetch(request, { signal })
+      return response
+    } catch (e) {
+      // abort request in any case
+      // I don't know how useful this is ?
+      controller.abort()
+      throw e
+    }
+  }
+
+  {
+    util.responseCacheIsValid = (responseInCache) => {
+      const cacheControlResponseHeader = responseInCache.headers.get("cache-control")
+      const maxAge = parseMaxAge(cacheControlResponseHeader)
+      return maxAge && maxAge > 0
+    }
+
+    // https://github.com/tusbar/cache-control
+    const parseMaxAge = (cacheControlHeader) => {
+      if (!cacheControlHeader || cacheControlHeader.length === 0) return null
+
+      const HEADER_REGEXP = /([a-zA-Z][a-zA-Z_-]*)\s*(?:=(?:"([^"]*)"|([^ \t",;]*)))?/g
+      const matches = cacheControlHeader.match(HEADER_REGEXP) || []
+
+      const values = {}
+      Array.from(matches).forEach((match) => {
+        const tokens = match.split("=", 2)
+
+        const [key] = tokens
+        let value = null
+
+        if (tokens.length > 1) {
+          value = tokens[1].trim()
+        }
+
+        values[key.toLowerCase()] = value
+      })
+
+      return parseDuration(values["max-age"])
+    }
+
+    const parseDuration = (value) => {
+      if (!value) {
+        return null
+      }
+
+      const duration = Number.parseInt(value, 10)
+
+      if (!Number.isFinite(duration) || duration < 0) {
+        return null
+      }
+
+      return duration
+    }
+  }
 }
 
-const { cacheName } = config
-if (typeof cacheName !== "string") {
-  throw new TypeError(`config.cacheName should be a string, got ${cacheName}`)
-}
+assertContextLooksGood()
+const util = getUtil()
 
-const { extraUrlsToCacheOnInstall } = config
-if (!Array.isArray(extraUrlsToCacheOnInstall)) {
-  throw new TypeError(
-    `config.extraUrlsToCacheOnInstall should be an array, got ${extraUrlsToCacheOnInstall}`,
-  )
-}
-
-const { urlMap } = config
-if (typeof urlMap !== "object") {
-  throw new TypeError(`config.urlMap should be an object, got ${urlMap}`)
-}
-
-const { shouldReloadOnInstall } = config
-if (typeof shouldReloadOnInstall !== "function") {
-  throw new TypeError(
-    `config.shouldReloadOnInstall should be a function, got ${shouldReloadOnInstall}`,
-  )
-}
-
-const { shouldCleanOnActivate } = config
-if (typeof shouldCleanOnActivate !== "function") {
-  throw new TypeError(
-    `config.shouldCleanOnActivate should be a function, got ${shouldCleanOnActivate}`,
-  )
-}
-
-const { shouldCleanOtherCacheOnActivate } = config
-if (typeof shouldCleanOtherCacheOnActivate !== "function") {
-  throw new TypeError(
-    `config.shouldCleanOtherCacheOnActivate should be a function, got ${shouldCleanOtherCacheOnActivate}`,
-  )
-}
-
-const { shouldHandleRequest } = config
-if (typeof shouldHandleRequest !== "function") {
-  throw new TypeError(`config.shouldHandleRequest should be a function, got ${shouldHandleRequest}`)
-}
-
-const { logsEnabled } = config
-if (typeof logsEnabled !== "boolean") {
-  throw new TypeError(`config.logsEnabled should be a boolean, got ${logsEnabled}`)
-}
-
-const { logsBackgroundColor } = config
-if (typeof logsBackgroundColor !== "string") {
-  throw new TypeError(`config.logsBackgroundColor should be a string, got ${logsBackgroundColor}`)
-}
-
-const { disableNavigationPreload } = config
-if (typeof disableNavigationPreload !== "boolean") {
-  throw new TypeError(
-    `config.disableNavigationPreload should be a boolean, got ${disableNavigationPreload}`,
-  )
-}
-
-const logger = util.createLogger({ logsEnabled, logsBackgroundColor })
+const logger = util.createLogger(config)
 
 const urlsToCacheOnInstall = [...self.jsenvBuildUrls, ...config.extraUrlsToCacheOnInstall].map(
   util.resolveUrl,
 )
 const urlMapping = {}
-Object.keys(urlMap).forEach((key) => {
-  urlMapping[util.resolveUrl(key)] = util.resolveUrl(urlMap[key])
+Object.keys(config.urlMap).forEach((key) => {
+  urlMapping[util.resolveUrl(key)] = util.resolveUrl(config.urlMap[key])
 })
 
 // --- installation phase ---
