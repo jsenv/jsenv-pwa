@@ -277,7 +277,7 @@ In the service worker:
 ```js
 self.addEventListener("message", async ({ data, ports }) => {
   if (data === "ping") {
-    messageEvent.ports[0].postMessage({ status: "resolved", value: "pong" })
+    ports[0].postMessage({ status: "resolved", value: "pong" })
   }
 })
 ```
