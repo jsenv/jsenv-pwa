@@ -9,8 +9,8 @@ export {
   getServiceWorkerUpdate,
   checkServiceWorkerUpdate,
   activateServiceWorkerUpdating,
-  autoReloadAfterControllerChangeIsEnabled,
-  disableAutoReloadAfterControllerChange,
+  autoReloadAfterUpdateIsEnabled,
+  disableAutoReloadAfterUpdate,
   // utils
   sendMessageToServiceWorker,
   sendMessageToServiceWorkerUpdating,
