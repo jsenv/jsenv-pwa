@@ -104,11 +104,16 @@ export const sendMessageToServiceWorker = (message) => {
   return sendMessageUsingChannel(serviceWorker, message)
 }
 
-export const serviceWorkerUpdateIsAvailable = () => {
-  return Boolean(serviceWorkerUpdating)
+export const getServiceWorkerUpdate = () => {
+  return serviceWorkerUpdating
+    ? {
+        willBecomeNavigatorController: Boolean(serviceWorkerAPI.controller),
+        navigatorWillReload: autoReloadEnabled,
+      }
+    : null
 }
 
-export const listenServiceWorkerUpdateAvailable = (callback) => {
+export const listenServiceWorkerUpdate = (callback) => {
   return serviceWorkerUpdatingChangeSignal.listen(callback)
 }
 
@@ -166,11 +171,7 @@ const sendSkipWaitingToWorker = async (
           onActivating()
         }
         if (worker.state === "activated") {
-          const serviceWorkerWillControlNavigator = Boolean(serviceWorkerAPI.controller)
-          onActivated({
-            serviceWorkerWillControlNavigator,
-            navigatorWillReload: serviceWorkerWillControlNavigator && autoReloadEnabled,
-          })
+          onActivated()
           removeStateChangeListener()
           resolve()
         }
@@ -200,7 +201,6 @@ const sendSkipWaitingToWorker = async (
         },
       )
     } else {
-      onBecomesNavigatorController()
       serviceWorkerUpdatingSetter(null)
     }
     return

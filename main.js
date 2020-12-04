@@ -5,8 +5,8 @@ export {
   registerServiceWorker,
   serviceWorkerIsAvailable,
   // update
-  serviceWorkerUpdateIsAvailable,
-  listenServiceWorkerUpdateAvailable,
+  listenServiceWorkerUpdate,
+  getServiceWorkerUpdate,
   checkServiceWorkerUpdate,
   activateServiceWorkerUpdating,
   disableAutoReloadAfterServiceWorkerUpdate,
