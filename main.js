@@ -1,8 +1,14 @@
+export {
+  canUseServiceWorker,
+  registerServiceWorkerControllingNavigator,
+  navigatorIsControlledByAServiceWorker,
+  listenServiceWorkerControllingNavigatorChange,
+  sendMessageToServiceWorkerControllingNavigator,
+  serviceWorkerControllingNavigatorUpdateIsAvailable,
+  listenServiceWorkerControllingNavigatorUpdateAvailable,
+  attemptServiceWorkerControllingNavigatorUpdate,
+  activateServiceWorkerControllingNavigatorUpdate,
+} from "./src/navigatorController.js"
+
 export { listenAddToHomescreenAvailable, promptAddToHomescreen } from "./src/add-to-home-screen.js"
-export { checkNavigatorControllerUpdate } from "./src/checkNavigatorControllerUpdate.js"
 export { listenAppInstalled } from "./src/listenAppInstalled.js"
-export { listenDisplayModeStandalone } from "./src/listenDisplayModeStandalone.js"
-export { listenNavigatorController } from "./src/listenNavigatorController.js"
-export { listenNavigatorControllerUpdateAvailable } from "./src/listenNavigatorControllerUpdateAvailable.js"
-export { registerServiceWorker } from "./src/registerServiceWorker.js"
-export { sendMessageToNavigatorController } from "./src/sendMessageToNavigatorController.js"

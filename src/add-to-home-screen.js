@@ -24,10 +24,7 @@
 */
 
 import { listenAppInstalled } from "./listenAppInstalled.js"
-import {
-  listenDisplayModeStandalone,
-  displayModeIsStandaloneGetter,
-} from "./listenDisplayModeStandalone.js"
+import { displayModeStandalone } from "./displayModeStandalone.js"
 
 export const listenAddToHomescreenAvailable = (callback) => {
   let availablePrevious
@@ -49,7 +46,7 @@ export const listenAddToHomescreenAvailable = (callback) => {
 
   checkAvailable({
     beforeinstallpromptEventAvailableOnWindow: beforeinstallpromptEventAvailableOnWindowGetter(),
-    displayModeIsStandalone: displayModeIsStandaloneGetter(),
+    displayModeIsStandalone: displayModeStandalone.get(),
   })
 
   const removeBeforeInstallPromptListener = listenBeforeInstallPrompt(
@@ -57,15 +54,15 @@ export const listenAddToHomescreenAvailable = (callback) => {
       window.beforeinstallpromptEvent = beforeinstallpromptEvent
       checkAvailable({
         beforeinstallpromptEventAvailableOnWindow: true,
-        displayModeIsStandalone: displayModeIsStandaloneGetter(),
+        displayModeIsStandalone: displayModeStandalone.get(),
       })
     },
   )
 
-  const removeDisplayModeListener = listenDisplayModeStandalone((displayModeIsStandalone) => {
+  const removeDisplayModeListener = displayModeStandalone.listen(() => {
     checkAvailable({
       beforeinstallpromptEventAvailableOnWindow: beforeinstallpromptEventAvailableOnWindowGetter(),
-      displayModeIsStandalone,
+      displayModeIsStandalone: displayModeStandalone.get(),
     })
   })
 
@@ -77,7 +74,7 @@ export const listenAddToHomescreenAvailable = (callback) => {
     appInstalledEvent = true
     checkAvailable({
       beforeinstallpromptEventAvailableOnWindow: beforeinstallpromptEventAvailableOnWindowGetter(),
-      displayModeIsStandalone: displayModeIsStandaloneGetter(),
+      displayModeIsStandalone: displayModeStandalone.get(),
     })
   })
 

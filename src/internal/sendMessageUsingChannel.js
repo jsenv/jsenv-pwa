@@ -1,5 +1,5 @@
 // https://felixgerschau.com/how-to-communicate-with-service-workers/
-export const sendMessageUsingChannel = (message, objectWithPostMessage) => {
+export const sendMessageUsingChannel = (objectWithPostMessage, message) => {
   const { port1, port2 } = new MessageChannel()
   return new Promise((resolve, reject) => {
     port1.onmessage = function (event) {
