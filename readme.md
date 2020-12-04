@@ -289,10 +289,10 @@ const value = await sendMessageToServiceWorker("ping")
 console.log(value) // "pong"
 ```
 
-This is used to tell the service worker to skip waiting and can be used to talk directly with the service worker.
+You can use `sendMessageToServiceWorker` as long as [serviceWorkerIsAvailable](#serviceWorkerIsAvailable) returns true. It will always communicate with the current service worker. Service worker can be installing, activating or activated. After a service worker gets updated `sendMessageToServiceWorker` will communicate with the new service worker.
 
 ### sendMessageToServiceWorkerUpdating
 
-`sendMessageToServiceWorkerUpdating` is like [sendMessageToServiceWorker](#sendMessageToServiceWorker) but for the service worker currently updating. If there is no service worker updating it logs a warning and returns `undefined`.
+`sendMessageToServiceWorkerUpdating` is like [sendMessageToServiceWorker](#sendMessageToServiceWorker) but for the service worker currently updating. It can be used to communicate with a service worker while it's being installed, waiting to activate or activating. After that the service worker becomes the current service worker and [sendMessageToServiceWorker](sendMessageToServiceWorker) must be used instead.
 
-It can be used to communicate with a service worker before it becomes the service worker controlling the navigator.
+Use `sendMessageToServiceWorkerUpdating` only while [getServiceWorkerUpdate](#getServiceWorkerUpdate) returns a truthy value, otherwise it will log a warning and return `undefined.`

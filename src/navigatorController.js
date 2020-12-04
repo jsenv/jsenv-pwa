@@ -197,11 +197,13 @@ const sendSkipWaitingToWorker = async (
         () => {
           removeControllerChangeListener()
           onBecomesNavigatorController()
+          serviceWorkerSetter(serviceWorkerUpdating)
           serviceWorkerUpdatingSetter(null)
           if (autoReloadEnabled) reload()
         },
       )
     } else {
+      serviceWorkerSetter(serviceWorkerUpdating)
       serviceWorkerUpdatingSetter(null)
       if (autoReloadEnabled) reload()
     }
@@ -209,6 +211,7 @@ const sendSkipWaitingToWorker = async (
   }
 
   onBecomesNavigatorController()
+  serviceWorkerSetter(serviceWorkerUpdating)
   serviceWorkerUpdatingSetter(null)
   if (autoReloadEnabled) reload()
 }
