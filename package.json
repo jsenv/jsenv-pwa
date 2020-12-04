@@ -5,7 +5,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jsenv/pwa"
+    "url": "https://github.com/jsenv/jsenv-pwa"
   },
   "engines": {
     "node": ">=14.0.0"
