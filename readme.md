@@ -38,6 +38,8 @@ TODO: short explanation about add to home screen.
 
 TODO: short explanation about service worker.
 
+Basic example using `@jsenv/pwa` to implement service worker.
+
 ```html
 <!DOCTYPE html>
 <html>
@@ -49,14 +51,15 @@ TODO: short explanation about service worker.
 
   <body>
     <div id="test">
-      <button id="check-update">Check update</button>
+      <button id="check-update" disabled>Check update</button>
       <p id="update-available"></p>
-      <button id="activate-update">Activate update</button>
+      <button id="activate-update" disabled>Activate update</button>
     </div>
 
     <script type="module">
       import {
         registerServiceWorker,
+        serviceWorkerIsAvailable,
         checkServiceWorkerUpdate,
         listenServiceWorkerUpdate,
         getServiceWorkerUpdate,
@@ -65,27 +68,35 @@ TODO: short explanation about service worker.
 
       registerServiceWorker("./sw.js")
 
-      document.querySelector("#check-update").onclick = async () => {
-        const found = await checkServiceWorkerUpdate()
-        if (!found) {
-          alert("no update found")
-        }
-      }
+      if (serviceWorkerIsAvailable()) {
+        const buttonCheckUpdate = document.querySelector("#check-update")
 
-      listenServiceWorkerUpdate(() => {
-        const available = Boolean(getServiceWorkerUpdate())
-        if (available) {
-          document.querySelector("#update-available").innerHTML = "An update is available !"
-          document.querySelector("#activate-update").disabled = false
-        } else {
-          document.querySelector("#update-available").innerHTML = ""
-          document.querySelector("#activate-update").disabled = true
+        buttonCheckUpdate.disabled = false
+        buttonCheckUpdate.onclick = async () => {
+          const found = await checkServiceWorkerUpdate()
+          if (!found) {
+            alert("no update found")
+          }
         }
-      })
 
-      document.querySelector("#activate-update").onclick = async () => {
-        document.querySelector("#activate-update").disabled = true
-        await activateServiceWorkerUpdating()
+        const textUpdateAvailable = document.querySelector("#update-available")
+        const buttonActivateUpdate = document.querySelector("#activate-update")
+
+        listenServiceWorkerUpdate(() => {
+          const available = Boolean(getServiceWorkerUpdate())
+          if (available) {
+            textUpdateAvailable.innerHTML = "An update is available !"
+            buttonActivateUpdate.disabled = false
+          } else {
+            textUpdateAvailable.innerHTML = ""
+            buttonActivateUpdate.disabled = true
+          }
+        })
+
+        buttonActivateUpdate.onclick = async () => {
+          buttonActivateUpdate.disabled = true
+          await activateServiceWorkerUpdating()
+        }
       }
     </script>
   </body>
