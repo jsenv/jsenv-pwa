@@ -18,11 +18,6 @@ const serviceWorkerSetter = (worker) => {
 let serviceWorkerUpdating = null
 const serviceWorkerUpdatingChangeSignal = createSignal()
 const serviceWorkerUpdatingSetter = (worker) => {
-  if (serviceWorker && serviceWorker === worker) {
-    console.log(`it's not an worker update, it's first time worker registers`)
-    // mais dans ce cas on pourrait vouloir skipWaiting sur ce worker aussi
-    return
-  }
   if (serviceWorkerUpdating && serviceWorkerUpdating === worker) {
     // we already know about this worker, no need to listen state changes.
     // it happens for manual updates where we bot detect it
@@ -63,6 +58,10 @@ export const registerServiceWorker = (url, { scope } = {}) => {
     serviceWorkerSetter(installing || waiting || active)
     removeUpdateFoundListener = listenEvent(registration, "updatefound", () => {
       console.log("browser notifies use an worker is installing")
+      if (registration.installing === installing) {
+        console.log(`it's not an worker update, it's first time worker registers`)
+        return
+      }
       serviceWorkerUpdatingSetter(registration.installing)
     })
   })()
@@ -175,26 +174,48 @@ const sendSkipWaitingToWorker = async (worker, { onActivating = () => {} } = {})
   if (state === "installed") {
     sendMessageToServiceWorkerUpdating({ action: "skipWaiting" })
     await waitUntilActivated()
-  } else if (state === "activating") {
+    const shouldReload = Boolean(serviceWorkerAPI.controller)
+    return {
+      shouldReload,
+      willReload: shouldReload && autoReloadEnabled,
+    }
+  }
+  if (state === "activating") {
     onActivating()
     await waitUntilActivated()
+    const shouldReload = Boolean(serviceWorkerAPI.controller)
+    return {
+      shouldReload,
+      willReload: shouldReload && autoReloadEnabled,
+    }
   }
 
+  // aussi le will reload et should reload dépende si y'avait un controller
   // activated or redundant, nothing to do
+  return {
+    shouldReload: false,
+    willReload: false,
+  }
 }
 
+let autoReloadEnabled = true
 let disableAutoReload = () => {}
 export const disableAutoReloadAfterServiceWorkerUpdate = () => disableAutoReload()
 
 if (canUseServiceWorker) {
   let refreshing = false
-  disableAutoReload = listenEvent(serviceWorkerAPI, "controllerchange", () => {
+  const removeControllerChangeListener = listenEvent(serviceWorkerAPI, "controllerchange", () => {
     if (refreshing) {
       return
     }
     refreshing = true
     window.location.reload()
   })
+
+  disableAutoReload = () => {
+    autoReloadEnabled = false
+    removeControllerChangeListener()
+  }
 }
 
 // const navigatorIsControlledByAServiceWorker = () => {
