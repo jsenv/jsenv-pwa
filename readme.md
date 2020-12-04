@@ -20,8 +20,8 @@ Service worker and other progressive web application helpers.
     - [listenServiceWorkerUpdate](#listenServiceWorkerUpdate)
     - [getServiceWorkerUpdate](#getServiceWorkerUpdate)
     - [activateServiceWorkerUpdating](#activateServiceWorkerUpdating)
-    - [disableAutoReloadAfterServiceWorkerUpdate](#disableAutoReloadAfterServiceWorkerUpdate)
-    - [autoReloadAfterServiceWorkerUpdateIsEnabled](#autoReloadAfterServiceWorkerUpdateIsEnabled)
+    - [disableAutoReloadAfterControllerChange](#disableAutoReloadAfterControllerChange)
+    - [autoReloadAfterControllerChangeIsEnabled](#autoReloadAfterControllerChangeIsEnabled)
   - [Service works utils](#Service-worker-utils)
     - [sendMessageToServiceWorker](#sendMessageToServiceWorker)
     - [sendMessageToServiceWorkerUpdating](#sendMessageToServiceWorkerUpdating)
@@ -51,8 +51,8 @@ console.log(canUseServiceWorker) // true or false
 In practice, you should not need to rely on `canUseServiceWorker` because functions will behave as you would expect if navigator does not support service workers:
 
 - `registerServiceWorker` does nothing
-- `serviceWorkerUpdateIsAvailable` always return `false`
-- `listenServiceWorkerUpdateAvailable` never call the callback
+- `getServiceWorkerUpdate` always return `null`
+- `listenServiceWorkerUpdate` never call the callback
 - `sendMessageToServiceWorker` does nothing and return `undefined`
 
 ## Service worker registration
@@ -92,7 +92,7 @@ To achieve that you can use the following exports
 ```js
 import { serviceWorkerIsAvailable } from "@jsenv/pwa"
 
-serviceWorkerIsAvailable() // true, false
+serviceWorkerIsAvailable() // true or false
 ```
 
 ### checkServiceWorkerUpdate
@@ -113,21 +113,22 @@ const updatefound = await checkServiceWorkerUpdate()
 import { listenServiceWorkerUpdate } from "@jsenv/pwa"
 
 listenServiceWorkerUpdate(() => {
-  // an update becomes available or unavailable, use getServiceWorkerUpdate() to know what is going on
+  // an update becomes available or unavailable
+  // use getServiceWorkerUpdate() to deduce this information
 })
 ```
 
 ### getServiceWorkerUpdate
 
-`getServiceWorkerUpdate` is a function returning a boolean indicating if there is an update available. It returns `null` if there is no update available and `{willBecomeNavigatorController, navigatorWillReload }` object otherwise.
+`getServiceWorkerUpdate` is a function returning a value indicating if there is an update available. It returns `null` if there is no update available and `{ shouldBecomeNavigatorController, navigatorWillReload }` object otherwise.
 
 ```js
 import { getServiceWorkerUpdate } from "@jsenv/pwa"
 
-getServiceWorkerUpdate() // { willBecomeNavigatorController, navigatorWillReload } or null
+getServiceWorkerUpdate() // { shouldBecomeNavigatorController, navigatorWillReload } or null
 ```
 
-`willBecomeNavigatorController` tells you if the service worker will become `window.navigator.serviceWorker.controller`. When previous service worker was not controlling the navigator the next service worker won't neither. You can reproduce this by visiting a page for the very first time, update the service worker file and check for update.
+`shouldBecomeNavigatorController` tells you if the service worker will become `window.navigator.serviceWorker.controller`. It can be false when previous service worker was not controlling the navigator. In that case the next service worker won't neither. You can reproduce this by visiting a page for the very first time, update the service worker file and check for update.
 
 > In that scenario, `navigatorWillReload` is `false` because you was already seeing a page not controlled by a service worker.
 
@@ -135,11 +136,11 @@ getServiceWorkerUpdate() // { willBecomeNavigatorController, navigatorWillReload
 
 ### activateServiceWorkerUpdating
 
-`activateServiceWorkerUpdating` is an async function that will tell the service worker it can `skipWaiting`. The navigator discards the old service worker and uses the new one. Once `activateServiceWorkerUpdating` resolves, the navigator is about to become controlled by the new service worker.
+`activateServiceWorkerUpdating` is an async function that will tell the service worker it can `skipWaiting`. The navigator discards the old service worker and uses the new one. If the navigator was controlled this new service worker will become the navigator controller.
 
 Once update is done, all listeners registered by [listenServiceWorkerUpdate](#listenServiceWorkerUpdate) will be called again and [getServiceWorkerUpdate](#getServiceWorkerUpdate) returns `null` until an other update becomes available.
 
-When service worker becomes navigator controller all active tabs will reloaded. See more in [disableAutoReloadAfterServiceWorkerUpdate](#disableAutoReloadAfterServiceWorkerUpdate).
+When and if service worker becomes navigator controller, all active tabs will reloaded. See more in [disableAutoReloadAfterServiceWorkerUpdate](#disableAutoReloadAfterServiceWorkerUpdate).
 
 ```js
 import { activateServiceWorkerUpdating } from "@jsenv/pwa"
@@ -157,9 +158,11 @@ await activateServiceWorkerUpdating({
 })
 ```
 
-### disableAutoReloadAfterServiceWorkerUpdate
+> `onBecomesNavigatorController` is called only if that service worker is controlling the navigator once activated.
 
-`disableAutoReloadAfterServiceWorkerUpdate` is a function that prevents navigator to refresh when the service worker updates. This is detected thanks to `controllerchange` event.
+### disableAutoReloadAfterControllerChange
+
+`disableAutoReloadAfterControllerChange` is a function that prevents navigator to refresh when the service worker updates. This is detected thanks to `controllerchange` event.
 
 By default tabs are reloaded to ensure all urls (js, imgs, ...) are reloaded when service worker updates as they might be outdated.
 
@@ -167,28 +170,28 @@ By default tabs are reloaded to ensure all urls (js, imgs, ...) are reloaded whe
 
 > The browser won't wildly reload by itself by default. It reloads by itself only after a call to [activateServiceWorkerUpdating](#activateServiceWorkerUpdating)
 
-If you want to control even further when navigator is reloaded, call `disableAutoReloadAfterServiceWorkerUpdate()`. You might want to disable auto reload because:
+If you want to control even further when navigator is reloaded, call `disableAutoReloadAfterControllerChange()`. You might want to disable auto reload because:
 
 - You want to specify the internals of service worker update and show a message like:
   "Service worker update is done. You can reload your browser to refresh urls"
 - You want a fine grained approach where you selectively decide if you need to reload browsr or not.
 
 ```js
-import { disableAutoReloadAfterServiceWorkerUpdate } from "@jsenv/pwa"
+import { disableAutoReloadAfterControllerChange } from "@jsenv/pwa"
 
-disableAutoReloadAfterServiceWorkerUpdate()
+disableAutoReloadAfterControllerChange()
 ```
 
 This autoreload is described as `Approach #3: Allow the user to control when to skip waiting with the Registration API` in https://redfin.engineering/how-to-fix-the-refresh-button-when-using-service-workers-a8e27af6df68.
 
 See also this question on stack overflow: https://stackoverflow.com/questions/40100922/activate-updated-service-worker-on-refresh
 
-### autoReloadAfterServiceWorkerUpdateIsEnabled
+### autoReloadAfterControllerChangeIsEnabled
 
 ```js
-import { autoReloadAfterServiceWorkerUpdateIsEnabled } from "@jsenv/pwa"
+import { autoReloadAfterControllerChangeIsEnabled } from "@jsenv/pwa"
 
-autoReloadAfterServiceWorkerUpdateIsEnabled() // true/false
+autoReloadAfterControllerChangeIsEnabled() // true/false
 ```
 
 ## Service worker utils

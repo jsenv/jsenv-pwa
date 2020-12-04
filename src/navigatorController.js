@@ -107,7 +107,7 @@ export const sendMessageToServiceWorker = (message) => {
 export const getServiceWorkerUpdate = () => {
   return serviceWorkerUpdating
     ? {
-        willBecomeNavigatorController: Boolean(serviceWorkerAPI.controller),
+        shouldBecomeNavigatorController: Boolean(serviceWorkerAPI.controller),
         navigatorWillReload: autoReloadEnabled,
       }
     : null
@@ -212,8 +212,8 @@ const sendSkipWaitingToWorker = async (
 
 let autoReloadEnabled = true
 let disableAutoReload = () => {}
-export const autoReloadAfterServiceWorkerUpdateIsEnabled = () => autoReloadEnabled
-export const disableAutoReloadAfterServiceWorkerUpdate = () => disableAutoReload()
+export const autoReloadAfterControllerChangeIsEnabled = () => autoReloadEnabled
+export const disableAutoReloadAfterControllerChange = () => disableAutoReload()
 
 if (canUseServiceWorker) {
   let refreshing = false
