@@ -5,10 +5,7 @@ const serviceWorkerAPI = window.navigator.serviceWorker
 
 export const canUseServiceWorker = Boolean(serviceWorkerAPI)
 
-export const registerServiceWorkerControllingNavigator = (
-  url,
-  { scope, onstatechange = () => {} } = {},
-) => {
+export const registerServiceWorker = (url, { scope, onstatechange = () => {} } = {}) => {
   let unregistered = false
   let unregister = () => {}
   let removeStateChangeListener = () => {}
@@ -41,7 +38,7 @@ export const registerServiceWorkerControllingNavigator = (
   }
 }
 
-const getServiceWorkerControllingNavigator = () => {
+export const getServiceWorkerControllingNavigator = () => {
   return navigatorIsControlledByAServiceWorker() ? serviceWorkerAPI.controller : null
 }
 
@@ -90,18 +87,18 @@ export const sendMessageToServiceWorkerControllingNavigator = (message) => {
 let serviceWorkerUpdating = null
 const updateAvailableCallbackSet = new Set()
 
-export const serviceWorkerControllingNavigatorUpdateIsAvailable = () => {
+export const serviceWorkerUpdateIsAvailable = () => {
   return Boolean(serviceWorkerUpdating)
 }
 
-export const listenServiceWorkerControllingNavigatorUpdateAvailable = (callback) => {
+export const listenServiceWorkerUpdateAvailable = (callback) => {
   updateAvailableCallbackSet.add(callback)
   return () => {
     updateAvailableCallbackSet.delete(callback)
   }
 }
 
-export const attemptServiceWorkerControllingNavigatorUpdate = async () => {
+export const checkServiceWorkerUpdate = async () => {
   const registration = await serviceWorkerAPI.ready
   const updateRegistration = await registration.update()
 
@@ -123,9 +120,7 @@ export const attemptServiceWorkerControllingNavigatorUpdate = async () => {
   return false
 }
 
-export const activateServiceWorkerControllingNavigatorUpdate = async ({
-  onActivating = () => {},
-} = {}) => {
+export const activateServiceWorkerUpdate = async ({ onActivating = () => {} } = {}) => {
   if (!serviceWorkerUpdating) {
     throw new Error("no service worker update to activate")
   }
