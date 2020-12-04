@@ -1,19 +1,20 @@
 // service worker
 export {
   canUseServiceWorker,
+  // registration
   registerServiceWorker,
-  navigatorIsControlledByAServiceWorker,
-  getServiceWorkerControllingNavigator,
-  listenServiceWorkerControllingNavigatorChange,
-  sendMessageToServiceWorkerControllingNavigator,
+  serviceWorkerIsAvailable,
+  // update
   serviceWorkerUpdateIsAvailable,
   listenServiceWorkerUpdateAvailable,
   checkServiceWorkerUpdate,
-  activateServiceWorkerUpdate,
+  activateServiceWorkerUpdating,
+  disableAutoReloadAfterServiceWorkerUpdate,
+  // utils
+  sendMessageToServiceWorker,
+  sendMessageToServiceWorkerUpdating,
 } from "./src/navigatorController.js"
 
 // add to home screen
 export { listenAddToHomescreenAvailable, promptAddToHomescreen } from "./src/add-to-home-screen.js"
-
-// others
 export { listenAppInstalled } from "./src/listenAppInstalled.js"
