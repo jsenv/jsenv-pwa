@@ -289,10 +289,10 @@ const value = await sendMessageToServiceWorker("ping")
 console.log(value) // "pong"
 ```
 
-You can use `sendMessageToServiceWorker` as long as [serviceWorkerIsAvailable](#serviceWorkerIsAvailable) returns true. It will always communicate with the current service worker. Service worker can be installing, activating or activated. After a service worker gets updated `sendMessageToServiceWorker` will communicate with the new service worker.
+You can use `sendMessageToServiceWorker` as long as [serviceWorkerIsAvailable](#serviceWorkerIsAvailable) returns true. It will always communicate with the current service worker. Service worker can be installing, activating or activated. As soon as a new service worker starts to activate `sendMessageToServiceWorker` will communicate with the service worker that is activating.
 
 ### sendMessageToServiceWorkerUpdating
 
-`sendMessageToServiceWorkerUpdating` is like [sendMessageToServiceWorker](#sendMessageToServiceWorker) but for the service worker currently updating. It can be used to communicate with a service worker while it's being installed, waiting to activate or activating. After that the service worker becomes the current service worker and [sendMessageToServiceWorker](sendMessageToServiceWorker) must be used instead.
+`sendMessageToServiceWorkerUpdating` is like [sendMessageToServiceWorker](#sendMessageToServiceWorker) but for the service worker currently updating. It can be used to communicate with a service worker while it's installing, installed (waiting to activate) or activating. After that the service worker becomes the current service worker and [sendMessageToServiceWorker](sendMessageToServiceWorker) must be used instead.
 
 Use `sendMessageToServiceWorkerUpdating` only while [getServiceWorkerUpdate](#getServiceWorkerUpdate) returns a truthy value, otherwise it will log a warning and return `undefined.`

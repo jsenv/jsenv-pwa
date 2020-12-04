@@ -96,6 +96,13 @@ export const registerServiceWorker = (url, { scope } = {}) => {
 //   }
 // }
 
+// For now this function will try to communicate with the old service worker
+// even if new worker is activating or activated.
+// It might not work because, from what I understood, the old worker gets killed
+// by the navigator as soon as the new worker starts to activate.
+// Maybe it should communicate with the new worker as soon as we know
+// updating worker is activating or activated.
+// -> yes
 export const sendMessageToServiceWorker = (message) => {
   if (!serviceWorker) {
     console.warn(`no service worker to send message to`)
@@ -168,9 +175,11 @@ const sendSkipWaitingToWorker = async (
     return new Promise((resolve) => {
       const removeStateChangeListener = listenEvent(worker, "statechange", () => {
         if (worker.state === "activating") {
+          serviceWorkerSetter(serviceWorkerUpdating)
           onActivating()
         }
         if (worker.state === "activated") {
+          serviceWorkerSetter(serviceWorkerUpdating)
           onActivated()
           removeStateChangeListener()
           resolve()
@@ -188,6 +197,9 @@ const sendSkipWaitingToWorker = async (
     if (state === "installed") {
       sendMessageToServiceWorkerUpdating({ action: "skipWaiting" })
     }
+    if (state === "activating") {
+      serviceWorkerSetter(serviceWorkerUpdating)
+    }
     await waitUntilActivated()
 
     if (serviceWorkerAPI.controller) {
@@ -197,21 +209,19 @@ const sendSkipWaitingToWorker = async (
         () => {
           removeControllerChangeListener()
           onBecomesNavigatorController()
-          serviceWorkerSetter(serviceWorkerUpdating)
           serviceWorkerUpdatingSetter(null)
           if (autoReloadEnabled) reload()
         },
       )
     } else {
-      serviceWorkerSetter(serviceWorkerUpdating)
       serviceWorkerUpdatingSetter(null)
       if (autoReloadEnabled) reload()
     }
     return
   }
 
-  onBecomesNavigatorController()
   serviceWorkerSetter(serviceWorkerUpdating)
+  onBecomesNavigatorController()
   serviceWorkerUpdatingSetter(null)
   if (autoReloadEnabled) reload()
 }
