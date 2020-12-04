@@ -198,32 +198,37 @@ const sendSkipWaitingToWorker = async (
           removeControllerChangeListener()
           onBecomesNavigatorController()
           serviceWorkerUpdatingSetter(null)
+          if (autoReloadEnabled) reload()
         },
       )
     } else {
       serviceWorkerUpdatingSetter(null)
+      if (autoReloadEnabled) reload()
     }
     return
   }
 
   onBecomesNavigatorController()
   serviceWorkerUpdatingSetter(null)
+  if (autoReloadEnabled) reload()
 }
 
 let autoReloadEnabled = true
 let disableAutoReload = () => {}
-export const autoReloadAfterControllerChangeIsEnabled = () => autoReloadEnabled
-export const disableAutoReloadAfterControllerChange = () => disableAutoReload()
+export const autoReloadAfterUpdateIsEnabled = () => autoReloadEnabled
+export const disableAutoReloadAfterUpdate = () => disableAutoReload()
+
+let refreshing = false
+const reload = () => {
+  if (refreshing) {
+    return
+  }
+  refreshing = true
+  window.location.reload()
+}
 
 if (canUseServiceWorker) {
-  let refreshing = false
-  const removeControllerChangeListener = listenEvent(serviceWorkerAPI, "controllerchange", () => {
-    if (refreshing) {
-      return
-    }
-    refreshing = true
-    window.location.reload()
-  })
+  const removeControllerChangeListener = listenEvent(serviceWorkerAPI, "controllerchange", reload)
 
   disableAutoReload = () => {
     autoReloadEnabled = false
