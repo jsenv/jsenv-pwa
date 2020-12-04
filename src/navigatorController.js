@@ -26,7 +26,11 @@ const serviceWorkerUpdatingSetter = (worker) => {
     console.log("we already know this worker is updating")
     return
   }
-  console.log(`found a worker updating (worker state is: ${worker.state})`)
+  if (worker) {
+    console.log(`found a worker updating (worker state is: ${worker.state})`)
+  } else {
+    console.log(`worker update is done`)
+  }
   serviceWorkerUpdating = worker
   serviceWorkerUpdatingChangeSignal.emit()
 }
@@ -150,7 +154,10 @@ export const activateServiceWorkerUpdating = async (params) => {
   return sendSkipWaitingToWorker(serviceWorkerUpdating, params)
 }
 
-const sendSkipWaitingToWorker = async (worker, { onActivating = () => {} } = {}) => {
+const sendSkipWaitingToWorker = async (
+  worker,
+  { onActivating = () => {}, onActivated = () => {}, onBecomesNavigatorController = () => {} } = {},
+) => {
   const { state } = worker
   const waitUntilActivated = () => {
     return new Promise((resolve) => {
@@ -159,6 +166,11 @@ const sendSkipWaitingToWorker = async (worker, { onActivating = () => {} } = {})
           onActivating()
         }
         if (worker.state === "activated") {
+          const serviceWorkerWillControlNavigator = Boolean(serviceWorkerAPI.controller)
+          onActivated({
+            serviceWorkerWillControlNavigator,
+            navigatorWillReload: serviceWorkerWillControlNavigator && autoReloadEnabled,
+          })
           removeStateChangeListener()
           resolve()
         }
@@ -171,35 +183,36 @@ const sendSkipWaitingToWorker = async (worker, { onActivating = () => {} } = {})
   // If it's installing it's an error.
   // If it's activating, we'll just skip the skipWaiting call
   // If it's activated, we'll just return early
-  if (state === "installed") {
-    sendMessageToServiceWorkerUpdating({ action: "skipWaiting" })
-    await waitUntilActivated()
-    const shouldReload = Boolean(serviceWorkerAPI.controller)
-    return {
-      shouldReload,
-      willReload: shouldReload && autoReloadEnabled,
+  if (state === "installed" || state === "activating") {
+    if (state === "installed") {
+      sendMessageToServiceWorkerUpdating({ action: "skipWaiting" })
     }
-  }
-  if (state === "activating") {
-    onActivating()
     await waitUntilActivated()
-    const shouldReload = Boolean(serviceWorkerAPI.controller)
-    return {
-      shouldReload,
-      willReload: shouldReload && autoReloadEnabled,
+
+    if (serviceWorkerAPI.controller) {
+      const removeControllerChangeListener = listenEvent(
+        serviceWorkerAPI,
+        "controllerchange",
+        () => {
+          removeControllerChangeListener()
+          onBecomesNavigatorController()
+          serviceWorkerUpdatingSetter(null)
+        },
+      )
+    } else {
+      onBecomesNavigatorController()
+      serviceWorkerUpdatingSetter(null)
     }
+    return
   }
 
-  // aussi le will reload et should reload dépende si y'avait un controller
-  // activated or redundant, nothing to do
-  return {
-    shouldReload: false,
-    willReload: false,
-  }
+  onBecomesNavigatorController()
+  serviceWorkerUpdatingSetter(null)
 }
 
 let autoReloadEnabled = true
 let disableAutoReload = () => {}
+export const autoReloadAfterServiceWorkerUpdateIsEnabled = () => autoReloadEnabled
 export const disableAutoReloadAfterServiceWorkerUpdate = () => disableAutoReload()
 
 if (canUseServiceWorker) {

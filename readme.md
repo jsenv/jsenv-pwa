@@ -21,6 +21,7 @@ Service worker and other progressive web application helpers.
     - [serviceWorkerUpdateIsAvailable](#serviceWorkerUpdateIsAvailable)
     - [activateServiceWorkerUpdating](#activateServiceWorkerUpdating)
     - [disableAutoReloadAfterServiceWorkerUpdate](#disableAutoReloadAfterServiceWorkerUpdate)
+    - [autoReloadAfterServiceWorkerUpdateIsEnabled](#autoReloadAfterServiceWorkerUpdateIsEnabled)
   - [Service works utils](#Service-worker-utils)
     - [sendMessageToServiceWorker](#sendMessageToServiceWorker)
     - [sendMessageToServiceWorkerUpdating](#sendMessageToServiceWorkerUpdating)
@@ -135,9 +136,23 @@ By default, all active tab will refresh as soon as navigator becomes controlled 
 import { activateServiceWorkerUpdating } from "@jsenv/pwa"
 
 await activateServiceWorkerUpdating({
-  onActivating: () => {},
+  onActivating: () => {
+    // new service worker is activating
+  },
+  onActivated: ({ serviceWorkerWillControlNavigator, navigatorWillReload }) => {
+    // new service worker is activated
+  },
+  onBecomesNavigatorController: () => {
+    // service worker becomes the navigator controller
+  },
 })
 ```
+
+`serviceWorkerWillControlNavigator` tells you if the service worker will become `window.navigator.serviceWorker.controller`. When previous service worker was not controlling the navigator the next service worker won't neither. You can reproduce this by visiting a page for the very first time, update the service worker file and check for update.
+
+> In that scenario, `navigatorWillReload` is `false` because you was already seeing a page not controlled by a service worker.
+
+`navigatorWillReload` is true if auto reload feature is enabled and navigator was controlled by a service worker before the update. Auto reload is documented in [disableAutoReloadAfterServiceWorkerUpdate](#disableAutoReloadAfterServiceWorkerUpdate).
 
 ### disableAutoReloadAfterServiceWorkerUpdate
 
@@ -164,6 +179,14 @@ disableAutoReloadAfterServiceWorkerUpdate()
 This autoreload is described as `Approach #3: Allow the user to control when to skip waiting with the Registration API` in https://redfin.engineering/how-to-fix-the-refresh-button-when-using-service-workers-a8e27af6df68.
 
 See also this question on stack overflow: https://stackoverflow.com/questions/40100922/activate-updated-service-worker-on-refresh
+
+### autoReloadAfterServiceWorkerUpdateIsEnabled
+
+```js
+import { autoReloadAfterServiceWorkerUpdateIsEnabled } from "@jsenv/pwa"
+
+autoReloadAfterServiceWorkerUpdateIsEnabled() // true/false
+```
 
 ## Service worker utils
 

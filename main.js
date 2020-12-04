@@ -10,6 +10,7 @@ export {
   checkServiceWorkerUpdate,
   activateServiceWorkerUpdating,
   disableAutoReloadAfterServiceWorkerUpdate,
+  autoReloadAfterServiceWorkerUpdateIsEnabled,
   // utils
   sendMessageToServiceWorker,
   sendMessageToServiceWorkerUpdating,
