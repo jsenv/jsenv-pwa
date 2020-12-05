@@ -24,6 +24,13 @@ const assertContextLooksGood = () => {
     throw new TypeError(`self.jsenvBuildUrls should be an array, got ${jsenvBuildUrls}`)
   }
 
+  const { jsenvBuildStaticUrls } = self
+  if (jsenvBuildStaticUrls === undefined) {
+    self.jsenvBuildStaticUrls = []
+  } else if (!Array.isArray(jsenvBuildStaticUrls)) {
+    throw new TypeError(`self.jsenvBuildStaticUrls should be an array, got ${jsenvBuildStaticUrls}`)
+  }
+
   if (typeof config === undefined) {
     throw new Error(`config is not in scope, be sure to import sw.preconfig.js before sw.jsenv.js`)
   }
@@ -37,6 +44,13 @@ const assertContextLooksGood = () => {
   if (!Array.isArray(extraUrlsToCacheOnInstall)) {
     throw new TypeError(
       `config.extraUrlsToCacheOnInstall should be an array, got ${extraUrlsToCacheOnInstall}`,
+    )
+  }
+
+  const { extraUrlsToReloadOnInstall } = config
+  if (!Array.isArray(extraUrlsToReloadOnInstall)) {
+    throw new TypeError(
+      `config.extraUrlsToReloadOnInstall should be an array, got ${extraUrlsToReloadOnInstall}`,
     )
   }
 
@@ -141,7 +155,7 @@ const getUtil = () => {
   }
 
   {
-    util.responseCacheIsValid = (responseInCache) => {
+    util.responseUsesLongTermCaching = (responseInCache) => {
       const cacheControlResponseHeader = responseInCache.headers.get("cache-control")
       const maxAge = parseMaxAge(cacheControlResponseHeader)
       return maxAge && maxAge > 0
@@ -197,6 +211,10 @@ const logger = util.createLogger(config)
 const urlsToCacheOnInstall = [...self.jsenvBuildUrls, ...config.extraUrlsToCacheOnInstall].map(
   util.resolveUrl,
 )
+const urlsToReloadOnInstall = [
+  ...self.jsenvBuildStaticUrls,
+  ...config.extraUrlsToReloadOnInstall,
+].map(util.resolveUrl)
 const urlMapping = {}
 Object.keys(config.urlMap).forEach((key) => {
   urlMapping[util.resolveUrl(key)] = util.resolveUrl(config.urlMap[key])
@@ -216,12 +234,7 @@ const install = async () => {
           const responseInCache = await caches.match(request)
 
           if (responseInCache) {
-            const shouldReload = util.responseCacheIsValid(responseInCache)
-              ? false
-              : config.shouldReloadOnInstall(responseInCache, request, {
-                  requestWasCachedOnInstall: urlsToCacheOnInstall.includes(request.url),
-                })
-            if (shouldReload) {
+            if (decideIfShoulReload(responseInCache, request)) {
               logger.info(`${request.url} in cache but should be reloaded`)
               const requestByPassingCache = new Request(url, { cache: "reload" })
               await fetchAndCache(requestByPassingCache, {
@@ -253,6 +266,25 @@ const install = async () => {
   } catch (error) {
     logger.error(`install error: ${error.stack}`)
   }
+}
+
+const decideIfShoulReload = (responseInCache, request) => {
+  // if (request.mode === "navigate") {
+  //   return false
+  // }
+
+  const responseUsesLongTermCaching = util.responseUsesLongTermCaching(responseInCache)
+  if (responseUsesLongTermCaching) {
+    return false
+  }
+  const requestUrlsInUrlsToReloadOnInstall = urlsToReloadOnInstall.includes(request.url)
+  if (requestUrlsInUrlsToReloadOnInstall) {
+    return true
+  }
+  const shouldReload = config.shouldReloadOnInstall(responseInCache, request, {
+    requestWasCachedOnInstall: urlsToCacheOnInstall.includes(request.url),
+  })
+  return shouldReload
 }
 
 self.addEventListener("install", (installEvent) => {

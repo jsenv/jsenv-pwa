@@ -13,6 +13,8 @@ config.cacheName = `jsenv-sw-1`
  */
 config.extraUrlsToCacheOnInstall = []
 
+config.extraUrlsToReloadOnInstall = []
+
 /**
  * Remap urls to others.
  * Was created to ensure a request at / can be configured to

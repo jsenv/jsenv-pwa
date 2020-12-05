@@ -21,7 +21,6 @@ self.importScripts("./node_modules/@jsenv/pwa/src/service-worker.setup.js")
 
 config.cacheName = "product-name"
 config.urlMap = { "/": "index.html" }
-// config.shouldReloadOnInstall = () => {}
 
 self.importScripts("./node_modules/@jsenv/pwa/src/service-worker.main.js")
 ```
@@ -73,8 +72,6 @@ self.importScripts("./node_modules/@jsenv/pwa/src/service-worker.setup.js")
 
 config.cacheName = "product-name"
 config.urlMap = { "/": "index.html" }
-config.shouldReloadOnInstall = (response, request) =>
-  new URL(request.url).pathname === "/index.html"
 
 self.importScripts("./node_modules/@jsenv/pwa/src/service-worker.main.js")
 ```
@@ -180,11 +177,11 @@ If you manually add an url to `config.extraUrlsToCacheOnInstall` that is not uni
 + config.extraUrlsToCacheOnInstall = ["https://fonts.googleapis.com/css2?family=Roboto"]
 ```
 
-Then, cache for that url is reused even after service worker updates. When you do that, be sure to update `config.shouldReloadOnInstall` so that is returns true for these urls
+Then, cache for that url is reused even after service worker updates. When you do that, be sure to update `config.extraUrlsToReloadOnInstall` so that is returns true for these urls
 
 ```diff
-- config.shouldReloadOnInstall = () => false
-+ config.shouldReloadOnInstall = (response, request) => request.url === "https://fonts.googleapis.com/css2?family=Roboto"
+- config.extraUrlsToReloadOnInstall = []
++ config.extraUrlsToReloadOnInstall = ["https://fonts.googleapis.com/css2?family=Roboto"]
 ```
 
 It's simpler to keep that responsability to the service worker but you might need/want to control that from your code. It's possible to control service worker cache as shown below:
