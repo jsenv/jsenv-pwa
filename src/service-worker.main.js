@@ -139,6 +139,17 @@ const getUtil = () => {
 
   util.resolveUrl = (string) => String(new URL(string, self.location))
 
+  util.toUniqueAndAbsoluteUrls = (urls) => {
+    const uniqueAndAbsoluteUrls = []
+    urls.forEach((url) => {
+      const absoluteUrl = util.resolveUrl(url)
+      if (!uniqueAndAbsoluteUrls.includes(absoluteUrl)) {
+        uniqueAndAbsoluteUrls.push(absoluteUrl)
+      }
+    })
+    return uniqueAndAbsoluteUrls
+  }
+
   util.fetchUsingNetwork = async (request) => {
     const controller = new AbortController()
     const { signal } = controller
@@ -208,13 +219,15 @@ const util = getUtil()
 
 const logger = util.createLogger(config)
 
-const urlsToCacheOnInstall = [...self.jsenvBuildUrls, ...config.extraUrlsToCacheOnInstall].map(
-  util.resolveUrl,
-)
-const urlsToReloadOnInstall = [
+const urlsToCacheOnInstall = util.toUniqueAndAbsoluteUrls([
+  ...self.jsenvBuildUrls,
+  ...self.jsenvBuildStaticUrls,
+  ...config.extraUrlsToCacheOnInstall,
+])
+const urlsToReloadOnInstall = util.toUniqueAndAbsoluteUrls([
   ...self.jsenvBuildStaticUrls,
   ...config.extraUrlsToReloadOnInstall,
-].map(util.resolveUrl)
+])
 const urlMapping = {}
 Object.keys(config.urlMap).forEach((key) => {
   urlMapping[util.resolveUrl(key)] = util.resolveUrl(config.urlMap[key])
