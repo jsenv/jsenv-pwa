@@ -17,11 +17,13 @@
 /* globals self, config */
 
 const assertContextLooksGood = () => {
-  const { jsenvBuildUrls } = self
-  if (jsenvBuildUrls === undefined) {
-    self.jsenvBuildUrls = []
-  } else if (!Array.isArray(jsenvBuildUrls)) {
-    throw new TypeError(`self.jsenvBuildUrls should be an array, got ${jsenvBuildUrls}`)
+  const { jsenvBuildDynamicUrls } = self
+  if (jsenvBuildDynamicUrls === undefined) {
+    self.jsenvBuildDynamicUrls = []
+  } else if (!Array.isArray(jsenvBuildDynamicUrls)) {
+    throw new TypeError(
+      `self.jsenvBuildDynamicUrls should be an array, got ${jsenvBuildDynamicUrls}`,
+    )
   }
 
   const { jsenvBuildStaticUrls } = self
@@ -220,7 +222,7 @@ const util = getUtil()
 const logger = util.createLogger(config)
 
 const urlsToCacheOnInstall = util.toUniqueAndAbsoluteUrls([
-  ...self.jsenvBuildUrls,
+  ...self.jsenvBuildDynamicUrls,
   ...self.jsenvBuildStaticUrls,
   ...config.extraUrlsToCacheOnInstall,
 ])
