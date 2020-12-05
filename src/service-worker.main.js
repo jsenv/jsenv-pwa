@@ -99,10 +99,10 @@ const assertContextLooksGood = () => {
     throw new TypeError(`config.logsBackgroundColor should be a string, got ${logsBackgroundColor}`)
   }
 
-  const { disableNavigationPreload } = config
-  if (typeof disableNavigationPreload !== "boolean") {
+  const { navigationPreloadEnabled } = config
+  if (typeof navigationPreloadEnabled !== "boolean") {
     throw new TypeError(
-      `config.disableNavigationPreload should be a boolean, got ${disableNavigationPreload}`,
+      `config.navigationPreloadEnabled should be a boolean, got ${navigationPreloadEnabled}`,
     )
   }
 }
@@ -332,10 +332,34 @@ const handleRequest = async (request, fetchEvent) => {
 
 const remapRequest = (request) => {
   if (Object.prototype.hasOwnProperty.call(urlMapping, request.url)) {
-    const requestRemapped = new Request(urlMapping[request.url], request)
-    return requestRemapped
+    return redirectRequest(request, urlMapping[request.url])
   }
   return request
+}
+
+const redirectRequest = async (request, url) => {
+  const { mode } = request
+  // see https://github.com/GoogleChrome/workbox/issues/1796
+  if (mode !== "navigate") {
+    return new Request(url, request)
+  }
+
+  const requestClone = request.clone()
+  const { body, credentials, headers, integrity, referrer, referrerPolicy } = requestClone
+  const bodyPromise = body ? Promise.resolve(body) : requestClone.blob()
+  const bodyValue = await bodyPromise
+
+  const requestMutated = new Request(url, {
+    body: bodyValue,
+    credentials,
+    headers,
+    integrity,
+    referrer,
+    referrerPolicy,
+    mode: "same-origin",
+    redirect: "manual",
+  })
+  return requestMutated
 }
 
 self.addEventListener("fetch", (fetchEvent) => {

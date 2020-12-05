@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/pwa",
-  "version": "2.6.3",
+  "version": "2.6.4",
   "description": "Service worker and other progressive web application helpers.",
   "license": "MIT",
   "repository": {
