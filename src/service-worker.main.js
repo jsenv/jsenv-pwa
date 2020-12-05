@@ -315,7 +315,7 @@ const activate = async () => {
 }
 
 const enableNavigationPreloadIfPossible = async () => {
-  if (!config.disableNavigationPreload && self.registration.navigationPreload) {
+  if (config.navigationPreloadEnabled && self.registration.navigationPreload) {
     await self.registration.navigationPreload.enable()
   }
 }

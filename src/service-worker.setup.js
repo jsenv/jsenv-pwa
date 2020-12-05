@@ -82,7 +82,7 @@ config.shouldCleanOnActivate = (response, request, { requestWasCachedOnInstall }
 */
 config.shouldCleanOtherCacheOnActivate = (cacheKey) => cacheKey.startsWith("jsenv-sw")
 
-config.logsEnabled = true
+config.logsEnabled = false
 config.logsBackgroundColor = "#ffdc00" // nice yellow
 
-config.disableNavigationPreload = false
+config.navigationPreloadEnabled = false
