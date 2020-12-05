@@ -1,17 +1,88 @@
-https://web.dev/manifest-updates/
+<!-- https://web.dev/manifest-updates/ -->
 
 # Jsenv service worker
 
 Jsenv service worker goal is to make the website capable to work offline.
 
-# Presentation
+# How to use
+
+- Install `@jsenv/pwa` in your dependencies
+
+```console
+npm install @jsenv/pwa
+```
+
+- Create a `service-worker.js` file
+
+```js
+/* globals self, config */
+
+self.importScripts("./node_modules/@jsenv/pwa/src/service-worker.setup.js")
+
+config.cacheName = "product-name"
+config.urlMap = { "/": "index.html" }
+// config.shouldReloadOnInstall = () => {}
+
+self.importScripts("./node_modules/@jsenv/pwa/src/service-worker.main.js")
+```
+
+- Register this service worker somewhere
+
+```js
+import { registerServiceWorker } from "@jsenv/pwa"
+
+registerServiceWorker("./service-worker.js")
+```
+
+> You can use `window.navigator.serviceWorker.register` if you don't want to use `registerServiceWorker`.
+
+With this code jsenv service worker will be registered in your website. But it won't cache any url or intercept requests because it was not configured to do anything. Yet.
+
+# Configuration
+
+Jsenv service worker must be configured between the two `importScripts` calls we saw on the previous part.
+
+Remember `config.cacheName = "product-name"` ?
+Here you can configure more things to tell the service worker what to do.
+
+For now this documentation is living in the code itself. Check directly [src/service-worker.setup.js](../src/service-worker.setup.js) to see the available configuration and what it does.
+
+<!-- https://github.com/jsenv/jsenv-core/blob/master/docs/building/readme.md
+It can be used independently from jsenv. If you are using jsenv to build your project, jsenv will also build your service workers files if you ask him to. In that case jsenv injects all urls into `self.jsenvBuildUrls` meaning your service worker knows url to cache automatically. -->
+
+<!-- but if you build your project using [@jsenv/core]
+If you use `@jsenv/core` to build your project
+it is meant to be used in a project using `@jsenv/core` to build -->
+
+# Symbiosis with `@jsenv/core`
+
+`@jsenv/core` can build service worker files. During that process, `self.jsenvBuildUrls` is injected into the service worker final script. It contains all urls builded by jsenv. This service worker checks the presence of `self.jsenvBuildUrls` and cache all these urls when it is installed.
+
+It means if your are using this service worked and building it with `@jsenv/core`, your service worker knows urls to cache automatically.
+
+## Implementation details when used with `@jsenv/core`
 
 Here is an high level overview of what happens from the very first visit of a user to the moment you update your website and user gets the updated version of it.
 
+Assuming your service worker script is as follow:
+
+`sw.js`
+
+```js
+self.importScripts("./node_modules/@jsenv/pwa/src/service-worker.setup.js")
+
+config.cacheName = "product-name"
+config.urlMap = { "/": "index.html" }
+config.shouldReloadOnInstall = (response, request) =>
+  new URL(request.url).pathname === "/index.html"
+
+self.importScripts("./node_modules/@jsenv/pwa/src/service-worker.main.js")
+```
+
 ## 1) User first visit
 
-- Some code inside that page calls `navigator.serviceWorker.register("./sw.js")`.
-- Browser fetch/parse/execute `sw.js` and its imported scripts: `service-worker.setup.js` and `service-worker.main.js`.
+- Some of your code does `navigator.serviceWorker.register("./sw.js")`.
+- Browser fetch/parse/execute `sw.js` and its imported scripts: [src/service-worker.setup.js](../src/service-worker.setup.js) and [src/service-worker.main.js](../src/service-worker.main.js).
 - Browser trigger `install` event on `service-worker.main.js`.
 - `service-worker.main.js` fetch all urls to cache on install and puts them into browser cache name after `config.cacheName`.
 

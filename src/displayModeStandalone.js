@@ -1,5 +1,5 @@
 /**
- * listenDisplayModeStandalone can be used to know the current displayMode of
+ * displayModeStandalone can be used to know the current displayMode of
  * our web page is standalone (PWA)
  */
 

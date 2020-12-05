@@ -11,8 +11,11 @@ Service worker and other progressive web application helpers.
 
 - [Presentation](#Presentation)
 - [Add to home screen](#Add-to-home-screen)
+  - [listenAddToHomescreenAvailable](#listenAddToHomescreenAvailable)
+  - [promptAddToHomescreen](#promptAddToHomescreen)
+  - [displayModeStandalone](#displayModeStandalone)
 - [Service worker](#Service-worker)
-  - [Service worker capability detection](#Service-worker-capability-detection)
+  - [Service worker code examples](#service-worker-code-examples)
   - [Service worker registration](#Service-worker-registration)
   - [Service worker update](#Service-worker-update)
     - [serviceWorkerIsAvailable](#serviceWorkerIsAvailable)
@@ -22,23 +25,87 @@ Service worker and other progressive web application helpers.
     - [activateServiceWorkerUpdating](#activateServiceWorkerUpdating)
     - [disableAutoReloadAfterUpdate](#disableAutoReloadAfterUpdate)
     - [autoReloadAfterUpdateIsEnabled](#autoReloadAfterUpdateIsEnabled)
+  - [Service worker capability detection](#Service-worker-capability-detection)
   - [Service works utils](#Service-worker-utils)
     - [sendMessageToServiceWorker](#sendMessageToServiceWorker)
     - [sendMessageToServiceWorkerUpdating](#sendMessageToServiceWorkerUpdating)
+- [Jsenv service worker](#jsenv-service-worker)
 
 # Presentation
 
-TODO
+`@jsenv/pwa` is a tool that can be used to implement the api required to turn a website into a progressive web application:
+
+- Add to home screen
+- Service workers
+
+> A progressive web application is a regular web page that is runned by a navigator but without the navigator ui.
 
 # Add to home screen
 
-TODO: short explanation about add to home screen.
+Add to home screen means a user can choose to add a shortcut to your website in their device. The navigator will then run your website with only your ui in fullscreen.
+
+## listenAddToHomescreenAvailable
+
+`listenAddToHomescreenAvailable` is a function that will call a callback when add to home screen becomes available or unavailable. You should use this function to decide if you can call [promptAddToHomescreen](#promptAddToHomescreen).
+
+This function consider add to home screen as available if:
+
+- The navigator fired a `beforeinstallprompt` event
+- The code is running in a browser tab
+
+The following code enable or disable a button depending if add to home screen is available or not.
+
+```js
+import { listenAddToHomescreenAvailable } from "@jsenv/pwa"
+
+listenAddToHomescreenAvailable((addToHomescreenAvailable) => {
+  document.querySelector("button#add-to-home-screen").disabled = !addToHomescreenAvailable
+})
+```
+
+## promptAddToHomescreen
+
+`promptAddToHomescreen` is an async function that will ask navigator to trigger a prompt to ask user if he wants to add your website to their homescreen. It resolves to a boolean indicating if users accepted or declined the prompt.
+
+It can be called many times but always inside a user interaction event handler, such as a click event.
+
+```js
+import { promptAddToHomescreen } from "@jsenv/pwa"
+
+document.querySelector("button#add-to-home-screen").onclick = async () => {
+  const accepted = await promptAddToHomescreen()
+  alert(`user choice: ${promptAddToHomescreen}`)
+}
+```
+
+## displayModeStandalone
+
+`displayModeStandalone` is an object that can be used to know if display mode is standalone or be notified when this changes. The standalone display mode is true when your web page is runned as an application (navigator ui is mostly/fully hidden).
+
+```js
+import { displayModeStandalone } from "@jsenv/pwa"
+
+displayModeStandalone.get() // true or false
+
+displayModeStandalone.listen(() => {
+  displayModeStandalone.get() // true or false
+})
+```
 
 # Service worker
 
-TODO: short explanation about service worker.
+Service worker allows you to register a script in the navigator. That script is granted with the ability to communicate with browser internal cache and intercept any request made by the navigator. They are designed to make a website capable to work offline and load instantly from cache before wondering if there is any update available.
 
-Basic example using `@jsenv/pwa` to implement service worker.
+The raw service worker api offered by navigators is complex to understand. Especially when it comes to updating a service worker. This documentation explain what is going on and how to use `@jsenv/pwa` to register and update a service worker.
+
+Read more on service worker at https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers.
+
+## Service worker code examples
+
+Basic code examples illustrating how to use `@jsenv/pwa` for service workers.
+
+<details>
+  <summary>Vanilla js</summary>
 
 ```html
 <!DOCTYPE html>
@@ -50,81 +117,186 @@ Basic example using `@jsenv/pwa` to implement service worker.
   </head>
 
   <body>
-    <div id="test">
-      <button id="check-update" disabled>Check update</button>
-      <p id="update-available"></p>
-      <button id="activate-update" disabled>Activate update</button>
-    </div>
-
-    <script type="module">
-      import {
-        registerServiceWorker,
-        serviceWorkerIsAvailable,
-        checkServiceWorkerUpdate,
-        listenServiceWorkerUpdate,
-        getServiceWorkerUpdate,
-        activateServiceWorkerUpdating,
-      } from "@jsenv/pwa"
-
-      registerServiceWorker("./sw.js")
-
-      if (serviceWorkerIsAvailable()) {
-        const buttonCheckUpdate = document.querySelector("#check-update")
-
-        buttonCheckUpdate.disabled = false
-        buttonCheckUpdate.onclick = async () => {
-          const found = await checkServiceWorkerUpdate()
-          if (!found) {
-            alert("no update found")
-          }
-        }
-
-        const textUpdateAvailable = document.querySelector("#update-available")
-        const buttonActivateUpdate = document.querySelector("#activate-update")
-
-        listenServiceWorkerUpdate(() => {
-          const available = Boolean(getServiceWorkerUpdate())
-          if (available) {
-            textUpdateAvailable.innerHTML = "An update is available !"
-            buttonActivateUpdate.disabled = false
-          } else {
-            textUpdateAvailable.innerHTML = ""
-            buttonActivateUpdate.disabled = true
-          }
-        })
-
-        buttonActivateUpdate.onclick = async () => {
-          buttonActivateUpdate.disabled = true
-          await activateServiceWorkerUpdating()
-        }
-      }
-    </script>
+    <button id="check-update" disabled>Check update</button>
+    <p id="update-available"></p>
+    <button id="activate-update" disabled>Activate update</button>
+    <script type="module" src="./file.js"></script>
   </body>
 </html>
 ```
 
-sw.js
-
 ```js
-self.addEventListener("fetch", () => {})
+import {
+  registerServiceWorker,
+  serviceWorkerIsAvailable,
+  checkServiceWorkerUpdate,
+  listenServiceWorkerUpdate,
+  getServiceWorkerUpdate,
+  activateServiceWorkerUpdating,
+} from "@jsenv/pwa"
+
+registerServiceWorker("./sw.js")
+
+if (serviceWorkerIsAvailable()) {
+  const buttonCheckUpdate = document.querySelector("#check-update")
+
+  buttonCheckUpdate.disabled = false
+  buttonCheckUpdate.onclick = async () => {
+    const found = await checkServiceWorkerUpdate()
+    if (!found) {
+      alert("no update found")
+    }
+  }
+
+  const textUpdateAvailable = document.querySelector("#update-available")
+  const buttonActivateUpdate = document.querySelector("#activate-update")
+
+  listenServiceWorkerUpdate(() => {
+    const available = Boolean(getServiceWorkerUpdate())
+    if (available) {
+      textUpdateAvailable.innerHTML = "An update is available !"
+      buttonActivateUpdate.disabled = false
+    } else {
+      textUpdateAvailable.innerHTML = ""
+      buttonActivateUpdate.disabled = true
+    }
+  })
+
+  buttonActivateUpdate.onclick = async () => {
+    buttonActivateUpdate.disabled = true
+    await activateServiceWorkerUpdating()
+  }
+}
 ```
 
-## Service worker capability detection
+</details>
 
-You likely want to register a service worker only if it's supported by the navigator. You can use `canUseServiceWorker` export to get that information.
+<details>
+    <summary>React</summary>
 
-```js
-import { canUseServiceWorker } from "@jsenv/pwa"
+```jsx
+import React from "react"
+import {
+  registerServiceWorker,
+  serviceWorkerIsAvailable,
+  getServiceWorkerUpdate,
+  listenServiceWorkerUpdate,
+  checkServiceWorkerUpdate,
+  activateServiceWorkerUpdating,
+} from "@jsenv/pwa"
 
-console.log(canUseServiceWorker) // true or false
+registerServiceWorker("./sw.js")
+
+export const App = () => {
+  const serviceWorkerIsAvailable = useServiceWorkerIsAvailable()
+  if (!serviceWorkerIsAvailable) {
+    return null
+  }
+  return <ServiceWorkerView />
+}
+
+const ServiceWorkerView = () => {
+  const checkServiceWorkerUpdate = useCheckServiceWorkerUpdate()
+  const serviceWorkerUpdate = useServiceWorkerUpdate()
+
+  return (
+    <fieldset>
+      <legend>Update</legend>
+      {serviceWorkerUpdate ? (
+        <UpdateAvailable serviceWorkerUpdate={serviceWorkerUpdate} />
+      ) : (
+        <UpdateNotAvailable />
+      )}
+    </fieldset>
+  )
+}
+
+const UpdateAvailable = ({ serviceWorkerUpdate }) => {
+  const { shouldBecomeNavigatorController, navigatorWillReload } = serviceWorkerUpdate
+  const activateServiceWorkerUpdating = useActivateServiceWorkerUpdating()
+
+  const [updatingStatus, updatingStatusSetter] = React.useState("")
+
+  const update = async () => {
+    updatingStatusSetter("updating")
+    await activateServiceWorkerUpdating({
+      onActivating: () => updatingStatusSetter("activating"),
+      onActivated: () => updatingStatusSetter("activated"),
+    })
+  }
+
+  return (
+    <>
+      <p>
+        {updatingStatus === "" ? "Update available" : null}
+        {updatingStatus === "updating" || updatingStatus === "activating" ? "Updating..." : null}
+        {updatingStatus === "activated" && navigatorWillReload
+          ? `Update activated, reloading...`
+          : null}
+        {updatingStatus === "activated" && !navigatorWillReload
+          ? `Update activated, reload to enable it.`
+          : null}
+      </p>
+      <button disabled={Boolean(updatingStatus)} onClick={update}>
+        Update
+      </button>
+    </>
+  )
+}
+
+const UpdateNotAvailable = () => {
+  const checkServiceWorkerUpdate = useCheckServiceWorkerUpdate()
+  const [updateAttemptStatus, updateAttemptStatusSetter] = React.useState("")
+
+  const check = async () => {
+    updateAttemptStatusSetter("fetching")
+    const found = await checkServiceWorkerUpdate()
+    if (found) {
+      // no need to handle that case because
+      // an update is now available
+      // meaning <UpdateAvailable /> will take over.
+    } else {
+      updateAttemptStatusSetter("notfound")
+    }
+  }
+
+  return (
+    <>
+      <p>
+        {updateAttemptStatus === "fetching" ? "Recherche de mise a jour..." : null}
+        {updateAttemptStatus === "notfound" ? "Pas de mise a jour disponible." : null}
+      </p>
+      <button disabled={updateAttemptStatus === "fetching"} onClick={check}>
+        Chercher
+      </button>
+    </>
+  )
+}
+
+const useServiceWorkerIsAvailable = () => {
+  return serviceWorkerIsAvailable()
+}
+
+const useServiceWorkerUpdate = () => {
+  const [update, updateSetter] = React.useState(getServiceWorkerUpdate())
+  React.useEffect(() => {
+    return listenServiceWorkerUpdate(() => {
+      updateSetter(getServiceWorkerUpdate())
+    })
+  }, [])
+  return update
+}
+
+const useCheckServiceWorkerUpdate = () => {
+  return checkServiceWorkerUpdate
+}
+
+const useActivateServiceWorkerUpdating = () => {
+  return activateServiceWorkerUpdating
+}
 ```
 
-In practice, you should not need to rely on `canUseServiceWorker` because functions will behave as you would expect if navigator does not support service workers:
-
-- `registerServiceWorker` does nothing
-- `getServiceWorkerUpdate` always return `null`
-- `listenServiceWorkerUpdate` never call the callback
-- `sendMessageToServiceWorker` does nothing and return `undefined`
+</details>
 
 ## Service worker registration
 
@@ -296,3 +468,25 @@ You can use `sendMessageToServiceWorker` as long as [serviceWorkerIsAvailable](#
 `sendMessageToServiceWorkerUpdating` is like [sendMessageToServiceWorker](#sendMessageToServiceWorker) but for the service worker currently updating. It can be used to communicate with a service worker while it's installing, installed (waiting to activate) or activating. After that the service worker becomes the current service worker and [sendMessageToServiceWorker](sendMessageToServiceWorker) must be used instead.
 
 Use `sendMessageToServiceWorkerUpdating` only while [getServiceWorkerUpdate](#getServiceWorkerUpdate) returns a truthy value, otherwise it will log a warning and return `undefined.`
+
+## Service worker capability detection
+
+You likely want to register a service worker only if it's supported by the navigator. You can use `canUseServiceWorker` export to get that information.
+
+```js
+import { canUseServiceWorker } from "@jsenv/pwa"
+
+console.log(canUseServiceWorker) // true or false
+```
+
+In practice, you should not need to rely on `canUseServiceWorker` because functions will behave as you would expect if navigator does not support service workers:
+
+- `registerServiceWorker` does nothing
+- `getServiceWorkerUpdate` always return `null`
+- `listenServiceWorkerUpdate` never call the callback
+- `sendMessageToServiceWorker` does nothing and return `undefined`
+
+# Jsenv service worker
+
+This repository also contains a service worker implementation ready to use.
+Read more in [Jsenv service worker documentation](./docs/jsenv-service-worker.md).

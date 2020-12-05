@@ -23,6 +23,7 @@
   To avoid that we store the event on window.beforeinstallpromptEvent.
 */
 
+import { listenEvent } from "./internal/listenEvent.js"
 import { listenAppInstalled } from "./listenAppInstalled.js"
 import { displayModeStandalone } from "./displayModeStandalone.js"
 
@@ -86,6 +87,11 @@ export const listenAddToHomescreenAvailable = (callback) => {
 }
 
 export const promptAddToHomescreen = async () => {
+  if (!window.beforeinstallpromptEvent) {
+    console.warn(`cannot promptAddToHomescreen: window.beforeinstallpromptEvent is missing`)
+    return false
+  }
+
   window.beforeinstallpromptEvent.prompt()
   const choiceResult = await window.beforeinstallpromptEvent.userChoice
   if (choiceResult.outcome === "accepted") {
@@ -115,9 +121,4 @@ const addToHomescreenAvailableGetter = ({
   return true
 }
 
-const listenBeforeInstallPrompt = (callback) => {
-  window.addEventListener("beforeinstallprompt", callback)
-  return () => {
-    window.removeEventListener("beforeinstallprompt", callback)
-  }
-}
+const listenBeforeInstallPrompt = (callback) => listenEvent(window, "beforeinstallprompt", callback)
