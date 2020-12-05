@@ -11,9 +11,9 @@ config.cacheName = `jsenv-sw-1`
  * Putting an url in that list means it is mandatory for the website to work offline
  * and that it will be cached as long as service worker is alive.
  */
-config.extraUrlsToCacheOnInstall = []
+config.extraUrlsToCacheOnInstall = ["/"]
 
-config.extraUrlsToReloadOnInstall = []
+config.extraUrlsToReloadOnInstall = ["/"]
 
 /**
  * Remap urls to others.
@@ -84,7 +84,7 @@ config.shouldCleanOnActivate = (response, request, { requestWasCachedOnInstall }
 */
 config.shouldCleanOtherCacheOnActivate = (cacheKey) => cacheKey.startsWith("jsenv-sw")
 
-config.logsEnabled = false
+config.logLevel = "warn"
 config.logsBackgroundColor = "#ffdc00" // nice yellow
 
 config.navigationPreloadEnabled = false

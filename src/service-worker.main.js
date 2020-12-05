@@ -89,9 +89,9 @@ const assertContextLooksGood = () => {
     )
   }
 
-  const { logsEnabled } = config
-  if (typeof logsEnabled !== "boolean") {
-    throw new TypeError(`config.logsEnabled should be a boolean, got ${logsEnabled}`)
+  const { logLevel } = config
+  if (typeof logLevel !== "string") {
+    throw new TypeError(`config.logLevel should be a boolean, got ${logLevel}`)
   }
 
   const { logsBackgroundColor } = config
@@ -119,7 +119,7 @@ const assertContextLooksGood = () => {
 const getUtil = () => {
   const util = {}
 
-  util.createLogger = ({ logsEnabled, logsBackgroundColor }) => {
+  util.createLogger = ({ logLevel, logsBackgroundColor }) => {
     const prefixArgs = (...args) => {
       return [
         `%csw`,
@@ -128,15 +128,60 @@ const getUtil = () => {
       ]
     }
 
-    const createLogMethod = (method) =>
-      logsEnabled ? (...args) => console[method](...prefixArgs(...args)) : () => {}
+    const createLogMethod = (method) => (...args) => console[method](...prefixArgs(...args))
 
-    return {
-      // debug: createLogMethod("debug"),
-      info: createLogMethod("info"),
-      warn: createLogMethod("warn"),
-      error: createLogMethod("error"),
+    const debug = createLogMethod("debug")
+    const info = createLogMethod("info")
+    const warn = createLogMethod("warn")
+    const error = createLogMethod("error")
+    const noop = () => {}
+
+    if (logLevel === "debug") {
+      return {
+        debug,
+        info,
+        warn,
+        error,
+      }
     }
+
+    if (logLevel === "info") {
+      return {
+        debug: noop,
+        info,
+        warn,
+        error,
+      }
+    }
+
+    if (logLevel === "warn") {
+      return {
+        debug: noop,
+        info: noop,
+        warn,
+        error,
+      }
+    }
+
+    if (logLevel === "error") {
+      return {
+        debug: noop,
+        info: noop,
+        warn: noop,
+        error,
+      }
+    }
+
+    if (logLevel === "off") {
+      return {
+        debug: noop,
+        info: noop,
+        warn: noop,
+        error: noop,
+      }
+    }
+
+    throw new Error(`unknown logLevel, got ${logLevel}`)
   }
 
   util.resolveUrl = (string) => String(new URL(string, self.location))
@@ -237,7 +282,7 @@ Object.keys(config.urlMap).forEach((key) => {
 
 // --- installation phase ---
 const install = async () => {
-  logger.info("install start")
+  logger.debug("install start")
   try {
     const total = urlsToCacheOnInstall.length
     let installed = 0
@@ -258,7 +303,7 @@ const install = async () => {
                 },
               })
             } else {
-              logger.info(`${request.url} already in cache`)
+              logger.debug(`${request.url} already in cache`)
               installed += 1
             }
           } else {
@@ -274,9 +319,9 @@ const install = async () => {
       }),
     )
     if (installed === total) {
-      logger.info(`install done (${total} urls added in cache)`)
+      logger.debug(`install done (${total} urls added in cache)`)
     } else {
-      logger.info(`install done (${installed}/${total} urls added in cache)`)
+      logger.debug(`install done (${installed}/${total} urls added in cache)`)
     }
   } catch (error) {
     logger.error(`install error: ${error.stack}`)
@@ -308,17 +353,17 @@ self.addEventListener("install", (installEvent) => {
 
 // --- fetch implementation ---
 const handleRequest = async (request, fetchEvent) => {
-  logger.info(`received fetch event for ${request.url}`)
+  logger.debug(`received fetch event for ${request.url}`)
   try {
     const responseFromCache = await caches.match(request)
     if (responseFromCache) {
-      logger.info(`respond with response from cache for ${request.url}`)
+      logger.debug(`respond with response from cache for ${request.url}`)
       return responseFromCache
     }
 
     const responsePreloaded = await fetchEvent.preloadResponse
     if (responsePreloaded) {
-      logger.info(`respond with preloaded response for ${request.url}`)
+      logger.debug(`respond with preloaded response for ${request.url}`)
       return responsePreloaded
     }
   } catch (error) {
@@ -326,7 +371,7 @@ const handleRequest = async (request, fetchEvent) => {
     return fetch(request)
   }
 
-  logger.info(`no cache for ${request.url}, fetching it`)
+  logger.debug(`no cache for ${request.url}, fetching it`)
   return fetchAndCache(request)
 }
 
@@ -339,6 +384,7 @@ const remapRequest = (request) => {
 
 const redirectRequest = async (request, url) => {
   const { mode } = request
+  logger.debug(`redirect request from ${request.url} to ${url}`)
   // see https://github.com/GoogleChrome/workbox/issues/1796
   if (mode !== "navigate") {
     return new Request(url, request)
@@ -379,10 +425,9 @@ self.addEventListener("fetch", (fetchEvent) => {
 
 // --- activation phase ---
 const activate = async () => {
-  logger.info("activate start")
-
+  logger.debug("activate start")
   await Promise.all([enableNavigationPreloadIfPossible(), deleteOtherUrls(), deleteOtherCaches()])
-  logger.info("activate done")
+  logger.debug("activate done")
 }
 
 const enableNavigationPreloadIfPossible = async () => {
@@ -402,7 +447,7 @@ const deleteOtherUrls = async () => {
           requestWasCachedOnInstall: urlsToCacheOnInstall.includes(requestInCache.url),
         })
       ) {
-        logger.info(`delete ${requestInCache.url}`)
+        logger.debug(`delete ${requestInCache.url}`)
         await cache.delete(requestInCache)
       }
     }),
@@ -414,7 +459,7 @@ const deleteOtherCaches = async () => {
   await Promise.all(
     cacheKeys.map(async (cacheKey) => {
       if (cacheKey !== config.cacheName && config.shouldCleanOtherCacheOnActivate(cacheKey)) {
-        logger.info(`delete cache ${cacheKey}`)
+        logger.debug(`delete cache ${cacheKey}`)
         await caches.delete(cacheKey)
       }
     }),
@@ -490,7 +535,7 @@ const fetchAndCache = async (request, { oncache } = {}) => {
   const [response, cache] = await Promise.all([util.fetchUsingNetwork(request), getCache()])
 
   if (response.status === 200) {
-    logger.info(`fresh response found for ${request.url}, put it in cache and respond with it`)
+    logger.debug(`fresh response found for ${request.url}, put it in cache and respond with it`)
 
     const cacheWrittenPromise = cache.put(request, response.clone())
     if (oncache) {
@@ -500,6 +545,6 @@ const fetchAndCache = async (request, { oncache } = {}) => {
 
     return response
   }
-  logger.info(`cannot put ${request.url} in cache due to response status (${response.status})`)
+  logger.warn(`cannot put ${request.url} in cache due to response status (${response.status})`)
   return response
 }
