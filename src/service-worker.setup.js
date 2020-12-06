@@ -29,21 +29,6 @@ config.shouldHandleRequest = (request, { requestWasCachedOnInstall }) => {
 }
 
 /*
-  shouldReloadOnInstall(response, request)
-
-  It is a function that will be used to decide if cache must be ignored
-  when service worker installs. When returning true service worker
-  re-fetch even if there is cache for that request, otherwise cache is reused.
-  It is called on every config.urlsToCacheOnInstall.
-  shouldReloadOnInstall is not called at all if server is sending cache-control
-  with a max-age > 0 for that request. Meaning the cache is reused in that case.
-
-  The implementation below tells to reuse cache for every url listed in
-  config.urlsToCacheOnInstall.
-*/
-config.shouldReloadOnInstall = () => false
-
-/*
   Whenever you change something in this file, such as config.cacheName
   or config.urlsToCacheOnInstall, browser reinstalls the service worker.
   When service worker activates, it is responsible to clean the cache

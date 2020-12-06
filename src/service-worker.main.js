@@ -41,13 +41,6 @@ const assertContextLooksGood = () => {
     throw new TypeError(`config.cachePrefix must not be empty`)
   }
 
-  const { shouldReloadOnInstall } = config
-  if (typeof shouldReloadOnInstall !== "function") {
-    throw new TypeError(
-      `config.shouldReloadOnInstall should be a function, got ${shouldReloadOnInstall}`,
-    )
-  }
-
   const { shouldCleanOnActivate } = config
   if (typeof shouldCleanOnActivate !== "function") {
     throw new TypeError(
@@ -319,6 +312,8 @@ const cacheName = util.getCacheName(config)
 const logger = util.createLogger(config)
 const { urlsToCacheOnInstall, urlsToReloadOnInstall, urlMapping } = util.readUrlConfig(config)
 
+logger.info(`cache key: ${cacheName}`)
+
 // --- installation phase ---
 const install = async () => {
   logger.info("install start")
@@ -329,29 +324,25 @@ const install = async () => {
     await Promise.all(
       urlsToCacheOnInstall.map(async (url) => {
         try {
-          const request = new Request(url)
-          const responseInCache = await self.caches.match(request)
-
-          if (responseInCache) {
-            if (decideIfShoulReload(responseInCache, request)) {
-              logger.info(`${request.url} in cache but should be reloaded`)
-              const requestByPassingCache = new Request(url, { cache: "reload" })
-              await fetchAndCache(requestByPassingCache, {
-                oncache: () => {
-                  installed += 1
-                },
-              })
-            } else {
-              logger.debug(`${request.url} already in cache`)
+          const requestUrlsInUrlsToReloadOnInstall = urlsToReloadOnInstall.includes(url)
+          const request = new Request(url, {
+            ...(requestUrlsInUrlsToReloadOnInstall
+              ? {
+                  // A non versioned url must ignore navigator cache
+                  // otherwise we might (99% chances) hit previous worker cache
+                  // and miss the new version
+                  cache: "reload",
+                }
+              : {
+                  // If versioned url is the same as before, it's ok to reuse
+                  // cache from previous worker or navigator itself.
+                }),
+          })
+          await fetchAndCache(request, {
+            oncache: () => {
               installed += 1
-            }
-          } else {
-            await fetchAndCache(request, {
-              oncache: () => {
-                installed += 1
-              },
-            })
-          }
+            },
+          })
         } catch (e) {
           logger.warn(`cannot put ${url} in cache due to error while fetching: ${e.stack}`)
         }
@@ -365,21 +356,6 @@ const install = async () => {
   } catch (error) {
     logger.error(`install error: ${error.stack}`)
   }
-}
-
-const decideIfShoulReload = (responseInCache, request) => {
-  const responseUsesLongTermCaching = util.responseUsesLongTermCaching(responseInCache)
-  if (responseUsesLongTermCaching) {
-    return false
-  }
-  const requestUrlsInUrlsToReloadOnInstall = urlsToReloadOnInstall.includes(request.url)
-  if (requestUrlsInUrlsToReloadOnInstall) {
-    return true
-  }
-  const shouldReload = config.shouldReloadOnInstall(responseInCache, request, {
-    requestWasCachedOnInstall: urlsToCacheOnInstall.includes(request.url),
-  })
-  return shouldReload
 }
 
 self.addEventListener("install", (installEvent) => {
@@ -564,9 +540,7 @@ const fetchUsingNetwork = async (request) => {
   }
 }
 
-let cache
 const getCache = async () => {
-  if (cache) return cache
-  cache = await self.caches.open(cacheName)
+  const cache = await self.caches.open(cacheName)
   return cache
 }
