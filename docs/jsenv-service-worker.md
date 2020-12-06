@@ -166,7 +166,7 @@ Jsenv ensure every url referenced in your html/css/js is replaced by a unique ur
 
 > A unique url is an url like `./file-es34578.css` where `es34578` is an hash computed depending on the content of the file.
 
-If you add an url to `config.manualUrlsConfig` that is not versionned it is fetched from network when service worker updates.
+If you add an url to `config.manualUrlsConfig` that is not versioned it is fetched from network when service worker updates.
 
 ```diff
 config.manualUrlsConfig = {
@@ -175,12 +175,12 @@ config.manualUrlsConfig = {
 }
 ```
 
-If you know your url is versionned, tell it to the service worker and that url won't be re-fetched from network between updates.
+If you know your url is versioned, tell it to the service worker and that url won't be re-fetched from network between updates.
 
 ```diff
 config.manualUrlsConfig = {
   "/": true,
-+ "https://fonts.googleapis.com/css2?family=Roboto": { versionned: true }
++ "https://fonts.googleapis.com/css2?family=Roboto": { versioned: true }
 }
 ```
 

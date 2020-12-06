@@ -11,8 +11,8 @@ config.cachePrefix = `jsenv`
  * Putting an url in that list means it is mandatory for the website to work offline
  * and that it will be cached as long as service worker is alive.
  *
- * You can tell worker the url is versionned doing
- * "style-v2.css": { versionned: true }
+ * You can tell worker the url is versioned doing
+ * "style-v2.css": { versioned: true }
  *
  */
 config.manualUrlsConfig = {

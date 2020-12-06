@@ -253,11 +253,11 @@ const getUtil = () => {
       forEachUniqueUrlIn(urlsConfig, (url, urlConfig) => {
         if (!urlConfig) urlConfig = { cache: false }
         if (urlConfig === true) urlConfig = { cache: true }
-        const { cache = true, versionned = false, alias } = urlConfig
+        const { cache = true, versioned = false, alias } = urlConfig
 
         if (cache) {
           urlsToCacheOnInstall.push(url)
-          if (!versionned) {
+          if (!versioned) {
             urlsToReloadOnInstall.push(url)
           }
         }
