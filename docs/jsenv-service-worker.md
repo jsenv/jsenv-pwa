@@ -19,7 +19,7 @@ npm install @jsenv/pwa
 
 self.importScripts("./node_modules/@jsenv/pwa/src/service-worker.setup.js")
 
-config.cacheName = "product-name"
+config.cachePrefix = "product-name"
 
 self.importScripts("./node_modules/@jsenv/pwa/src/service-worker.main.js")
 ```
@@ -40,7 +40,7 @@ With this code jsenv service worker will be registered in your website. By defau
 
 Jsenv service worker must be configured between the two `importScripts` calls we saw on the previous part.
 
-Remember `config.cacheName = "product-name"` ?
+Remember `config.cachePrefix = "product-name"` ?
 Here you can configure more things to tell the service worker what to do.
 
 For now this documentation is living in the code itself. Check directly [src/service-worker.setup.js](../src/service-worker.setup.js) to see the available configuration and what it does.
@@ -69,7 +69,7 @@ Assuming your service worker script is as follow:
 ```js
 self.importScripts("./node_modules/@jsenv/pwa/src/service-worker.setup.js")
 
-config.cacheName = "product-name"
+config.cachePrefix = "product-name"
 
 self.importScripts("./node_modules/@jsenv/pwa/src/service-worker.main.js")
 ```
@@ -79,7 +79,7 @@ self.importScripts("./node_modules/@jsenv/pwa/src/service-worker.main.js")
 - Some of your code does `navigator.serviceWorker.register("./sw.js")`.
 - Browser fetch/parse/execute `sw.js` and its imported scripts: [src/service-worker.setup.js](../src/service-worker.setup.js) and [src/service-worker.main.js](../src/service-worker.main.js).
 - Browser trigger `install` event on `service-worker.main.js`.
-- `service-worker.main.js` fetch all urls to cache on install and puts them into browser cache name after `config.cacheName`.
+- `service-worker.main.js` fetch all urls to cache on install and puts them into navigator cache using `config.cachePrefix` to generate a unique cache key.
 
 > These url will be cached as long as this service worker lives.
 

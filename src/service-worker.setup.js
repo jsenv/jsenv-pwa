@@ -29,7 +29,7 @@ config.shouldHandleRequest = (request, { requestWasCachedOnInstall }) => {
 }
 
 /*
-  Whenever you change something in this file, such as config.cacheName
+  Whenever you change something in this file, such as config.cachePrefix
   or config.urlsToCacheOnInstall, browser reinstalls the service worker.
   When service worker activates, it is responsible to clean the cache
   used by the previous service worker version.
