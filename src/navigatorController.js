@@ -151,7 +151,7 @@ export const checkServiceWorkerUpdate = async () => {
   return false
 }
 
-export const sendMessageToServiceWorkerUpdating = (message) => {
+export const sendMessageToServiceWorkerUpdate = (message) => {
   if (!serviceWorkerUpdating) {
     console.warn(`no service worker updating to send message to`)
     return undefined
@@ -159,7 +159,7 @@ export const sendMessageToServiceWorkerUpdating = (message) => {
   return sendMessageUsingChannel(serviceWorkerUpdating, message)
 }
 
-export const activateServiceWorkerUpdating = async (params) => {
+export const activateServiceWorkerUpdate = async (params) => {
   if (!serviceWorkerUpdating) {
     throw new Error("no service worker update to activate")
   }
@@ -195,7 +195,7 @@ const sendSkipWaitingToWorker = async (
   // If it's activated, we'll just return early
   if (state === "installed" || state === "activating") {
     if (state === "installed") {
-      sendMessageToServiceWorkerUpdating({ action: "skipWaiting" })
+      sendMessageToServiceWorkerUpdate({ action: "skipWaiting" })
     }
     if (state === "activating") {
       serviceWorkerSetter(serviceWorkerUpdating)

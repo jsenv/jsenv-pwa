@@ -3,24 +3,21 @@
 self.config = {}
 const { config } = self
 
-config.cacheName = `jsenv-sw-1`
+config.cachePrefix = `jsenv`
 
 /**
- * Service worker will try to put all config.extraUrlsToCacheOnInstall into browser cache
+ * Service worker will try to put all config.manualUrlsConfig into browser cache
  * when it is installed (installation happens once).
  * Putting an url in that list means it is mandatory for the website to work offline
  * and that it will be cached as long as service worker is alive.
+ *
+ * You can tell worker the url is versionned doing
+ * "style-v2.css": { versionned: true }
+ *
  */
-config.extraUrlsToCacheOnInstall = ["/"]
-
-config.extraUrlsToReloadOnInstall = ["/"]
-
-/**
- * Remap urls to others.
- * Was created to ensure a request at / can be configured to
- * read and write cache at /main.html
- */
-config.urlMap = {}
+config.manualUrlsConfig = {
+  "/": {},
+}
 
 /*
   Decides if the request must be cached or not.
@@ -71,20 +68,11 @@ config.shouldReloadOnInstall = () => false
 config.shouldCleanOnActivate = (response, request, { requestWasCachedOnInstall }) =>
   !requestWasCachedOnInstall
 
-/*
-  shouldCleanOtherCacheOnActivate(cacheKey)
-
-  It is a function that will be used to decide if an existing cache must be deleted
-  when the service worker activates.
-
-  The implementation below tells to delete cache only if it starts by "jsenv-sw"
-  to ensure we delete only cache the we have created. It means that if you want to
-  update config.cacheName you should update jsenv-sw-1 to pjsenv-sw-2 and so on. Or update
-  shouldCleanOtherCacheOnActivate to match your custom logic.
-*/
-config.shouldCleanOtherCacheOnActivate = (cacheKey) => cacheKey.startsWith("jsenv-sw")
-
 config.logLevel = "warn"
 config.logsBackgroundColor = "#ffdc00" // nice yellow
 
 config.navigationPreloadEnabled = false
+
+config.actions = {
+  ping: () => "pong",
+}

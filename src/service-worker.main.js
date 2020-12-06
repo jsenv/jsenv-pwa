@@ -17,48 +17,28 @@
 /* globals self, config */
 
 const assertContextLooksGood = () => {
-  const { jsenvBuildDynamicUrls } = self
-  if (jsenvBuildDynamicUrls === undefined) {
-    self.jsenvBuildDynamicUrls = []
-  } else if (!Array.isArray(jsenvBuildDynamicUrls)) {
-    throw new TypeError(
-      `self.jsenvBuildDynamicUrls should be an array, got ${jsenvBuildDynamicUrls}`,
-    )
-  }
-
-  const { jsenvBuildStaticUrls } = self
-  if (jsenvBuildStaticUrls === undefined) {
-    self.jsenvBuildStaticUrls = []
-  } else if (!Array.isArray(jsenvBuildStaticUrls)) {
-    throw new TypeError(`self.jsenvBuildStaticUrls should be an array, got ${jsenvBuildStaticUrls}`)
+  const { generatedUrlsConfig } = self
+  if (generatedUrlsConfig === undefined) {
+    self.generatedUrlsConfig = {}
+  } else if (typeof generatedUrlsConfig !== "object") {
+    throw new TypeError(`self.generatedUrlsConfig should be an object, got ${generatedUrlsConfig}`)
   }
 
   if (typeof config === undefined) {
     throw new Error(`config is not in scope, be sure to import sw.preconfig.js before sw.jsenv.js`)
   }
 
-  const { cacheName } = config
-  if (typeof cacheName !== "string") {
-    throw new TypeError(`config.cacheName should be a string, got ${cacheName}`)
+  const { manualUrlsConfig } = config
+  if (typeof manualUrlsConfig !== "object") {
+    throw new TypeError(`config.manualUrlsConfig should be an array, got ${manualUrlsConfig}`)
   }
 
-  const { extraUrlsToCacheOnInstall } = config
-  if (!Array.isArray(extraUrlsToCacheOnInstall)) {
-    throw new TypeError(
-      `config.extraUrlsToCacheOnInstall should be an array, got ${extraUrlsToCacheOnInstall}`,
-    )
+  const { cachePrefix } = config
+  if (typeof cachePrefix !== "string") {
+    throw new TypeError(`config.cachePrefix should be a string, got ${cachePrefix}`)
   }
-
-  const { extraUrlsToReloadOnInstall } = config
-  if (!Array.isArray(extraUrlsToReloadOnInstall)) {
-    throw new TypeError(
-      `config.extraUrlsToReloadOnInstall should be an array, got ${extraUrlsToReloadOnInstall}`,
-    )
-  }
-
-  const { urlMap } = config
-  if (typeof urlMap !== "object") {
-    throw new TypeError(`config.urlMap should be an object, got ${urlMap}`)
+  if (cachePrefix.length === 0) {
+    throw new TypeError(`config.cachePrefix must not be empty`)
   }
 
   const { shouldReloadOnInstall } = config
@@ -72,13 +52,6 @@ const assertContextLooksGood = () => {
   if (typeof shouldCleanOnActivate !== "function") {
     throw new TypeError(
       `config.shouldCleanOnActivate should be a function, got ${shouldCleanOnActivate}`,
-    )
-  }
-
-  const { shouldCleanOtherCacheOnActivate } = config
-  if (typeof shouldCleanOtherCacheOnActivate !== "function") {
-    throw new TypeError(
-      `config.shouldCleanOtherCacheOnActivate should be a function, got ${shouldCleanOtherCacheOnActivate}`,
     )
   }
 
@@ -115,7 +88,6 @@ const assertContextLooksGood = () => {
  * The {} pattern was choosed because it allows to have private helpers
  * such as parseMaxAge. Not possible to do that with a plain object.
  */
-
 const getUtil = () => {
   const util = {}
 
@@ -186,32 +158,6 @@ const getUtil = () => {
 
   util.resolveUrl = (string) => String(new URL(string, self.location))
 
-  util.toUniqueAndAbsoluteUrls = (urls) => {
-    const uniqueAndAbsoluteUrls = []
-    urls.forEach((url) => {
-      const absoluteUrl = util.resolveUrl(url)
-      if (!uniqueAndAbsoluteUrls.includes(absoluteUrl)) {
-        uniqueAndAbsoluteUrls.push(absoluteUrl)
-      }
-    })
-    return uniqueAndAbsoluteUrls
-  }
-
-  util.fetchUsingNetwork = async (request) => {
-    const controller = new AbortController()
-    const { signal } = controller
-
-    try {
-      const response = await fetch(request, { signal })
-      return response
-    } catch (e) {
-      // abort request in any case
-      // I don't know how useful this is ?
-      controller.abort()
-      throw e
-    }
-  }
-
   {
     util.responseUsesLongTermCaching = (responseInCache) => {
       const cacheControlResponseHeader = responseInCache.headers.get("cache-control")
@@ -258,31 +204,124 @@ const getUtil = () => {
     }
   }
 
+  {
+    util.getCacheName = ({ cachePrefix }) => {
+      return `${cachePrefix}${generateCacheId()}`
+    }
+
+    const base = 36
+    const blockSize = 4
+    const discreteValues = Math.pow(base, blockSize)
+
+    const pad = (number, size) => {
+      var s = `000000000${number}`
+      return s.substr(s.length - size)
+    }
+
+    const getRandomValue = (() => {
+      const { crypto } = self
+      if (crypto) {
+        const lim = Math.pow(2, 32) - 1
+        return () => {
+          return Math.abs(crypto.getRandomValues(new Uint32Array(1))[0] / lim)
+        }
+      }
+      return Math.random
+    })()
+
+    const randomBlock = () => {
+      return pad(((getRandomValue() * discreteValues) << 0).toString(base), blockSize)
+    }
+
+    const generateCacheId = () => {
+      const timestamp = new Date().getTime().toString(base)
+      const random = `${randomBlock()}${randomBlock()}`
+
+      return `${timestamp}${random}`
+    }
+  }
+
+  {
+    util.readUrlConfig = () => {
+      const urlsConfig = {
+        ...self.generatedUrlsConfig,
+        ...config.manualUrlsConfig,
+      }
+      const urlsToCacheOnInstall = []
+      const urlsToReloadOnInstall = []
+      const urlMapping = {}
+      forEachUniqueUrlIn(urlsConfig, (url, urlConfig) => {
+        if (!urlConfig) urlConfig = { cache: false }
+        if (urlConfig === true) urlConfig = { cache: true }
+        const { cache = true, versionned = false, alias } = urlConfig
+
+        if (cache) {
+          urlsToCacheOnInstall.push(url)
+          if (!versionned) {
+            urlsToReloadOnInstall.push(url)
+          }
+        }
+        if (alias) {
+          urlMapping[url] = util.resolveUrl(alias)
+        }
+      })
+      return {
+        urlsToCacheOnInstall,
+        urlsToReloadOnInstall,
+        urlMapping,
+      }
+    }
+
+    const forEachUniqueUrlIn = (object, callback) => {
+      const urls = []
+      Object.keys(object).forEach((key) => {
+        const url = util.resolveUrl(key)
+        if (!urls.includes(url)) {
+          urls.push(url)
+          callback(url, object[key])
+        }
+      })
+    }
+  }
+
+  util.redirectRequest = async (request, url) => {
+    const { mode } = request
+    // see https://github.com/GoogleChrome/workbox/issues/1796
+    if (mode !== "navigate") {
+      return new Request(url, request)
+    }
+
+    const requestClone = request.clone()
+    const { body, credentials, headers, integrity, referrer, referrerPolicy } = requestClone
+    const bodyPromise = body ? Promise.resolve(body) : requestClone.blob()
+    const bodyValue = await bodyPromise
+
+    const requestMutated = new Request(url, {
+      body: bodyValue,
+      credentials,
+      headers,
+      integrity,
+      referrer,
+      referrerPolicy,
+      mode: "same-origin",
+      redirect: "manual",
+    })
+    return requestMutated
+  }
+
   return util
 }
 
 assertContextLooksGood()
+
 const util = getUtil()
-
+const cacheName = util.getCacheName(config)
 const logger = util.createLogger(config)
-
-const urlsToCacheOnInstall = util.toUniqueAndAbsoluteUrls([
-  ...self.jsenvBuildDynamicUrls,
-  ...self.jsenvBuildStaticUrls,
-  ...config.extraUrlsToCacheOnInstall,
-])
-const urlsToReloadOnInstall = util.toUniqueAndAbsoluteUrls([
-  ...self.jsenvBuildStaticUrls,
-  ...config.extraUrlsToReloadOnInstall,
-])
-const urlMapping = {}
-Object.keys(config.urlMap).forEach((key) => {
-  urlMapping[util.resolveUrl(key)] = util.resolveUrl(config.urlMap[key])
-})
+const { urlsToCacheOnInstall, urlsToReloadOnInstall, urlMapping } = util.readUrlConfig(config)
 
 // --- installation phase ---
 const install = async () => {
-  logger.debug("install start")
+  logger.info("install start")
   try {
     const total = urlsToCacheOnInstall.length
     let installed = 0
@@ -291,7 +330,7 @@ const install = async () => {
       urlsToCacheOnInstall.map(async (url) => {
         try {
           const request = new Request(url)
-          const responseInCache = await caches.match(request)
+          const responseInCache = await self.caches.match(request)
 
           if (responseInCache) {
             if (decideIfShoulReload(responseInCache, request)) {
@@ -319,9 +358,9 @@ const install = async () => {
       }),
     )
     if (installed === total) {
-      logger.debug(`install done (${total} urls added in cache)`)
+      logger.info(`install done (${total} urls added in cache)`)
     } else {
-      logger.debug(`install done (${installed}/${total} urls added in cache)`)
+      logger.info(`install done (${installed}/${total} urls added in cache)`)
     }
   } catch (error) {
     logger.error(`install error: ${error.stack}`)
@@ -329,10 +368,6 @@ const install = async () => {
 }
 
 const decideIfShoulReload = (responseInCache, request) => {
-  // if (request.mode === "navigate") {
-  //   return false
-  // }
-
   const responseUsesLongTermCaching = util.responseUsesLongTermCaching(responseInCache)
   if (responseUsesLongTermCaching) {
     return false
@@ -355,7 +390,7 @@ self.addEventListener("install", (installEvent) => {
 const handleRequest = async (request, fetchEvent) => {
   logger.debug(`received fetch event for ${request.url}`)
   try {
-    const responseFromCache = await caches.match(request)
+    const responseFromCache = await self.caches.match(request)
     if (responseFromCache) {
       logger.debug(`respond with response from cache for ${request.url}`)
       return responseFromCache
@@ -377,35 +412,11 @@ const handleRequest = async (request, fetchEvent) => {
 
 const remapRequest = (request) => {
   if (Object.prototype.hasOwnProperty.call(urlMapping, request.url)) {
-    return redirectRequest(request, urlMapping[request.url])
+    const newUrl = urlMapping[request.url]
+    logger.debug(`redirect request from ${request.url} to ${newUrl}`)
+    return util.redirectRequest(request, newUrl)
   }
   return request
-}
-
-const redirectRequest = async (request, url) => {
-  const { mode } = request
-  logger.debug(`redirect request from ${request.url} to ${url}`)
-  // see https://github.com/GoogleChrome/workbox/issues/1796
-  if (mode !== "navigate") {
-    return new Request(url, request)
-  }
-
-  const requestClone = request.clone()
-  const { body, credentials, headers, integrity, referrer, referrerPolicy } = requestClone
-  const bodyPromise = body ? Promise.resolve(body) : requestClone.blob()
-  const bodyValue = await bodyPromise
-
-  const requestMutated = new Request(url, {
-    body: bodyValue,
-    credentials,
-    headers,
-    integrity,
-    referrer,
-    referrerPolicy,
-    mode: "same-origin",
-    redirect: "manual",
-  })
-  return requestMutated
 }
 
 self.addEventListener("fetch", (fetchEvent) => {
@@ -425,9 +436,9 @@ self.addEventListener("fetch", (fetchEvent) => {
 
 // --- activation phase ---
 const activate = async () => {
-  logger.debug("activate start")
+  logger.info("activate start")
   await Promise.all([enableNavigationPreloadIfPossible(), deleteOtherUrls(), deleteOtherCaches()])
-  logger.debug("activate done")
+  logger.info("activate done")
 }
 
 const enableNavigationPreloadIfPossible = async () => {
@@ -437,7 +448,7 @@ const enableNavigationPreloadIfPossible = async () => {
 }
 
 const deleteOtherUrls = async () => {
-  const cache = await caches.open(config.cacheName)
+  const cache = await self.caches.open(cacheName)
   const requestsInCache = await cache.keys()
   await Promise.all(
     requestsInCache.map(async (requestInCache) => {
@@ -447,7 +458,7 @@ const deleteOtherUrls = async () => {
           requestWasCachedOnInstall: urlsToCacheOnInstall.includes(requestInCache.url),
         })
       ) {
-        logger.debug(`delete ${requestInCache.url}`)
+        logger.info(`delete ${requestInCache.url}`)
         await cache.delete(requestInCache)
       }
     }),
@@ -455,12 +466,12 @@ const deleteOtherUrls = async () => {
 }
 
 const deleteOtherCaches = async () => {
-  const cacheKeys = await caches.keys()
+  const cacheKeys = await self.caches.keys()
   await Promise.all(
     cacheKeys.map(async (cacheKey) => {
-      if (cacheKey !== config.cacheName && config.shouldCleanOtherCacheOnActivate(cacheKey)) {
-        logger.debug(`delete cache ${cacheKey}`)
-        await caches.delete(cacheKey)
+      if (cacheKey !== cacheName && cacheKey.startsWith(config.cachePrefix)) {
+        logger.info(`delete cache ${cacheKey}`)
+        await self.caches.delete(cacheKey)
       }
     }),
   )
@@ -478,23 +489,23 @@ const actions = {
   skipWaiting: () => {
     self.skipWaiting()
   },
-  ping: () => "pong",
   refreshCacheKey: async (url) => {
-    url = String(new URL(url, self.location))
+    url = util.resolveUrl(url)
     const response = await fetchAndCache(new Request(url, { cache: "reload" }))
     return response.status
   },
   addCacheKey: async (url) => {
-    url = String(new URL(url, self.location))
+    url = util.resolveUrl(url)
     const response = await fetchAndCache(url)
     return response.status
   },
   removeCacheKey: async (url) => {
-    url = String(new URL(url, self.location))
-    const cache = await caches.open(config.cacheName)
+    url = util.resolveUrl(url)
+    const cache = await self.caches.open(cacheName)
     const deleted = await cache.delete(url)
     return deleted
   },
+  ...config.actions,
 }
 
 self.addEventListener("message", async (messageEvent) => {
@@ -504,12 +515,12 @@ self.addEventListener("message", async (messageEvent) => {
   const actionFn = actions[action]
   if (!actionFn) return
 
-  const { args = [] } = data
+  const { payload } = data
 
   let status
   let value
   try {
-    const actionFnReturnValue = await actionFn(...args)
+    const actionFnReturnValue = await actionFn(payload, { cacheName })
     status = "resolved"
     value = actionFnReturnValue
   } catch (e) {
@@ -520,19 +531,8 @@ self.addEventListener("message", async (messageEvent) => {
   messageEvent.ports[0].postMessage({ status, value })
 })
 
-// ---- utils ----
-
-const caches = self.caches
-
-let cache
-const getCache = async () => {
-  if (cache) return cache
-  cache = await caches.open(config.cacheName)
-  return cache
-}
-
 const fetchAndCache = async (request, { oncache } = {}) => {
-  const [response, cache] = await Promise.all([util.fetchUsingNetwork(request), getCache()])
+  const [response, cache] = await Promise.all([fetchUsingNetwork(request), getCache()])
 
   if (response.status === 200) {
     logger.debug(`fresh response found for ${request.url}, put it in cache and respond with it`)
@@ -547,4 +547,26 @@ const fetchAndCache = async (request, { oncache } = {}) => {
   }
   logger.warn(`cannot put ${request.url} in cache due to response status (${response.status})`)
   return response
+}
+
+const fetchUsingNetwork = async (request) => {
+  const controller = new AbortController()
+  const { signal } = controller
+
+  try {
+    const response = await fetch(request, { signal })
+    return response
+  } catch (e) {
+    // abort request in any case
+    // I don't know how useful this is ?
+    controller.abort()
+    throw e
+  }
+}
+
+let cache
+const getCache = async () => {
+  if (cache) return cache
+  cache = await self.caches.open(cacheName)
+  return cache
 }

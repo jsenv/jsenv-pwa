@@ -13,10 +13,10 @@ export {
   listenServiceWorkerUpdate,
   getServiceWorkerUpdate,
   checkServiceWorkerUpdate,
-  activateServiceWorkerUpdating,
+  activateServiceWorkerUpdate,
   autoReloadAfterUpdateIsEnabled,
   disableAutoReloadAfterUpdate,
   // utils
   sendMessageToServiceWorker,
-  sendMessageToServiceWorkerUpdating,
+  sendMessageToServiceWorkerUpdate,
 } from "./src/navigatorController.js"
