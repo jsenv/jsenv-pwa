@@ -513,7 +513,7 @@ const fetchAndCache = async (request, { oncache } = {}) => {
   if (response.status === 200) {
     logger.debug(`fresh response found for ${request.url}, put it in cache and respond with it`)
 
-    const cacheWrittenPromise = cache.put(request, response.clone())
+    const cacheWrittenPromise = cache.put(request, responseForCache(response))
     if (oncache) {
       await cacheWrittenPromise
       oncache()
@@ -523,6 +523,32 @@ const fetchAndCache = async (request, { oncache } = {}) => {
   }
   logger.warn(`cannot put ${request.url} in cache due to response status (${response.status})`)
   return response
+}
+
+const responseForCache = (response) => {
+  const responseClone = response.clone()
+
+  if (!response.redirected) {
+    return responseClone
+  }
+
+  // When passed a redirected response, this will create a new, "clean" response
+  // that can be used to respond to a navigation request.
+  // See https://bugs.chromium.org/p/chromium/issues/detail?id=669363&desc=2#c1
+
+  // Not all browsers support the Response.body stream, so fall back to reading
+  // the entire body into memory as a blob.
+  const bodyPromise =
+    "body" in responseClone ? Promise.resolve(responseClone.body) : responseClone.blob()
+
+  return bodyPromise.then((body) => {
+    // new Response() is happy when passed either a stream or a Blob.
+    return new Response(body, {
+      headers: responseClone.headers,
+      status: responseClone.status,
+      statusText: responseClone.statusText,
+    })
+  })
 }
 
 const fetchUsingNetwork = async (request) => {
