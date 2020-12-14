@@ -513,7 +513,8 @@ const fetchAndCache = async (request, { oncache } = {}) => {
   if (response.status === 200) {
     logger.debug(`fresh response found for ${request.url}, put it in cache and respond with it`)
 
-    const cacheWrittenPromise = cache.put(request, responseForCache(response))
+    const responseForCache = await responseToResponseForCache(response)
+    const cacheWrittenPromise = cache.put(request, responseForCache)
     if (oncache) {
       await cacheWrittenPromise
       oncache()
@@ -525,7 +526,7 @@ const fetchAndCache = async (request, { oncache } = {}) => {
   return response
 }
 
-const responseForCache = (response) => {
+const responseToResponseForCache = async (response) => {
   const responseClone = response.clone()
 
   if (!response.redirected) {
@@ -541,13 +542,12 @@ const responseForCache = (response) => {
   const bodyPromise =
     "body" in responseClone ? Promise.resolve(responseClone.body) : responseClone.blob()
 
-  return bodyPromise.then((body) => {
-    // new Response() is happy when passed either a stream or a Blob.
-    return new Response(body, {
-      headers: responseClone.headers,
-      status: responseClone.status,
-      statusText: responseClone.statusText,
-    })
+  const body = await bodyPromise
+  // new Response() is happy when passed either a stream or a Blob.
+  return new Response(body, {
+    headers: responseClone.headers,
+    status: responseClone.status,
+    statusText: responseClone.statusText,
   })
 }
 
