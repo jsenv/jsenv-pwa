@@ -6,7 +6,8 @@ import { sendMessageUsingChannel } from "./internal/sendMessageUsingChannel.js"
 
 const serviceWorkerAPI = window.navigator.serviceWorker
 
-export const canUseServiceWorker = Boolean(serviceWorkerAPI)
+export const canUseServiceWorker =
+  Boolean(serviceWorkerAPI) && document.location.protocol === "https:"
 
 // https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerRegistration
 let registrationPromise = null
@@ -131,6 +132,11 @@ export const checkServiceWorkerUpdate = async () => {
   }
 
   const registration = await registrationPromise
+  // await for the registration promise above can take some time
+  // especially when the service worker is installing for the first time
+  // because it is fetching a lot of urls to put into cache.
+  // In that scenario we might want to display something different ?
+  // Without this UI seems to take ages to check for an update
   const updateRegistration = await registration.update()
 
   const { installing } = updateRegistration
