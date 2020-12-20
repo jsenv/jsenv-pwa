@@ -127,8 +127,8 @@ Basic code examples illustrating how to use `@jsenv/pwa` for service workers.
 
 ```js
 import {
+  canUseServiceWorker,
   registerServiceWorker,
-  serviceWorkerIsAvailable,
   checkServiceWorkerUpdate,
   listenServiceWorkerUpdate,
   getServiceWorkerUpdate,
@@ -137,7 +137,7 @@ import {
 
 registerServiceWorker("./sw.js")
 
-if (serviceWorkerIsAvailable()) {
+if (canUseServiceWorker) {
   const buttonCheckUpdate = document.querySelector("#check-update")
 
   buttonCheckUpdate.disabled = false
@@ -177,8 +177,8 @@ if (serviceWorkerIsAvailable()) {
 ```jsx
 import React from "react"
 import {
+  canUseServiceWorker,
   registerServiceWorker,
-  serviceWorkerIsAvailable,
   getServiceWorkerUpdate,
   listenServiceWorkerUpdate,
   checkServiceWorkerUpdate,
@@ -188,8 +188,7 @@ import {
 registerServiceWorker("./sw.js")
 
 export const App = () => {
-  const serviceWorkerIsAvailable = useServiceWorkerIsAvailable()
-  if (!serviceWorkerIsAvailable) {
+  if (!canUseServiceWorker) {
     return null
   }
   return <ServiceWorkerView />
@@ -271,10 +270,6 @@ const UpdateNotAvailable = () => {
       </button>
     </>
   )
-}
-
-const useServiceWorkerIsAvailable = () => {
-  return serviceWorkerIsAvailable()
 }
 
 const useServiceWorkerUpdate = () => {
