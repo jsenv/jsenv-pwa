@@ -120,53 +120,51 @@ Basic code examples illustrating how to use `@jsenv/pwa` for service workers.
     <button id="check-update" disabled>Check update</button>
     <p id="update-available"></p>
     <button id="activate-update" disabled>Activate update</button>
-    <script type="module" src="./file.js"></script>
+    <script type="module">
+      import {
+        canUseServiceWorker,
+        registerServiceWorker,
+        checkServiceWorkerUpdate,
+        listenServiceWorkerUpdate,
+        getServiceWorkerUpdate,
+        activateServiceWorkerUpdate,
+      } from "@jsenv/pwa"
+
+      registerServiceWorker("./sw.js")
+
+      if (canUseServiceWorker) {
+        const buttonCheckUpdate = document.querySelector("#check-update")
+
+        buttonCheckUpdate.disabled = false
+        buttonCheckUpdate.onclick = async () => {
+          const found = await checkServiceWorkerUpdate()
+          if (!found) {
+            alert("no update found")
+          }
+        }
+
+        const textUpdateAvailable = document.querySelector("#update-available")
+        const buttonActivateUpdate = document.querySelector("#activate-update")
+
+        listenServiceWorkerUpdate(() => {
+          const available = Boolean(getServiceWorkerUpdate())
+          if (available) {
+            textUpdateAvailable.innerHTML = "An update is available !"
+            buttonActivateUpdate.disabled = false
+          } else {
+            textUpdateAvailable.innerHTML = ""
+            buttonActivateUpdate.disabled = true
+          }
+        })
+
+        buttonActivateUpdate.onclick = async () => {
+          buttonActivateUpdate.disabled = true
+          await activateServiceWorkerUpdate()
+        }
+      }
+    </script>
   </body>
 </html>
-```
-
-```js
-import {
-  canUseServiceWorker,
-  registerServiceWorker,
-  checkServiceWorkerUpdate,
-  listenServiceWorkerUpdate,
-  getServiceWorkerUpdate,
-  activateServiceWorkerUpdate,
-} from "@jsenv/pwa"
-
-registerServiceWorker("./sw.js")
-
-if (canUseServiceWorker) {
-  const buttonCheckUpdate = document.querySelector("#check-update")
-
-  buttonCheckUpdate.disabled = false
-  buttonCheckUpdate.onclick = async () => {
-    const found = await checkServiceWorkerUpdate()
-    if (!found) {
-      alert("no update found")
-    }
-  }
-
-  const textUpdateAvailable = document.querySelector("#update-available")
-  const buttonActivateUpdate = document.querySelector("#activate-update")
-
-  listenServiceWorkerUpdate(() => {
-    const available = Boolean(getServiceWorkerUpdate())
-    if (available) {
-      textUpdateAvailable.innerHTML = "An update is available !"
-      buttonActivateUpdate.disabled = false
-    } else {
-      textUpdateAvailable.innerHTML = ""
-      buttonActivateUpdate.disabled = true
-    }
-  })
-
-  buttonActivateUpdate.onclick = async () => {
-    buttonActivateUpdate.disabled = true
-    await activateServiceWorkerUpdate()
-  }
-}
 ```
 
 </details>
@@ -311,17 +309,17 @@ This provide service worker on your navigator. And the navigator will take care 
 
 This repository helps a lot to get something clean out of the messy api navigator offers when it comes to handle service worker update. Check https://redfin.engineering/how-to-fix-the-refresh-button-when-using-service-workers-a8e27af6df68 if you want an idea of how messy it is.
 
-To implement a user interface around service worker update, you need the following:
+To implement a user interface around service worker update, you need an api to:
 
-- Is there a service worker registerd on the page ?
+- Ask if there a service worker registerd on the page
 
-- A callback to know when there is an available update.
+- Register a callback to know when an update is available
 
-- A function to manually check if an update is available.
+- Trigger update check when you want
 
-- A function to "force" update the service worker
+- Force the update of the service worker
 
-To achieve that you can use the following exports
+To achieve that you can use the functions documented below.
 
 ### serviceWorkerIsAvailable
 
@@ -375,7 +373,7 @@ In that scenario, you was already seeing a page not controlled by a service work
 
 `activateServiceWorkerUpdate` is an async function that will tell the service worker it can `skipWaiting`. The navigator discards the old service worker and uses the new one. If the navigator was controlled this new service worker will become the navigator controller.
 
-Once update is done, all listeners registered by [listenServiceWorkerUpdate](#listenServiceWorkerUpdate) will be called again and [getServiceWorkerUpdate](#getServiceWorkerUpdate) returns `null` until an other update becomes available.
+Once update is done, all listeners registered by [listenServiceWorkerUpdate](#listenServiceWorkerUpdate) are called and [getServiceWorkerUpdate](#getServiceWorkerUpdate) returns `null` until an other update becomes available.
 
 When and if service worker becomes navigator controller, all active tabs will reloaded. See more in [disableAutoReloadAfterServiceWorkerUpdate](#disableAutoReloadAfterServiceWorkerUpdate).
 
@@ -411,7 +409,7 @@ If you want to control even further when navigator is reloaded, call `disableAut
 
 - You want to specify the internals of service worker update and show a message like:
   "Service worker update is done. You can reload your browser to refresh urls"
-- You want a fine grained approach where you selectively decide if you need to reload browsr or not.
+- You want a fine grained approach where you selectively decide if you need to reload browser or not.
 
 ```js
 import { disableAutoReloadAfterUpdate } from "@jsenv/pwa"

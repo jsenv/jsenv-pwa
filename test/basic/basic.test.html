@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+    <script type="importmap">
+      {
+        "imports": {
+          "@jsenv/pwa": "../../main.js"
+        }
+      }
+    </script>
+  </head>
+
+  <body>
+    <button id="check-update" disabled>Check update</button>
+    <p id="update-available"></p>
+    <button id="activate-update" disabled>Activate update</button>
+    <script type="module">
+      import {
+        canUseServiceWorker,
+        registerServiceWorker,
+        checkServiceWorkerUpdate,
+        listenServiceWorkerUpdate,
+        getServiceWorkerUpdate,
+        activateServiceWorkerUpdate,
+        enableServiceWorkerLogs,
+      } from "@jsenv/pwa"
+
+      enableServiceWorkerLogs()
+
+      registerServiceWorker("/test/basic/sw.js")
+
+      if (canUseServiceWorker) {
+        const buttonCheckUpdate = document.querySelector("#check-update")
+
+        buttonCheckUpdate.disabled = false
+        buttonCheckUpdate.onclick = async () => {
+          const found = await checkServiceWorkerUpdate()
+          if (!found) {
+            // eslint-disable-next-line no-alert
+            window.alert("no update found")
+          }
+        }
+
+        const textUpdateAvailable = document.querySelector("#update-available")
+        const buttonActivateUpdate = document.querySelector("#activate-update")
+
+        listenServiceWorkerUpdate(() => {
+          const available = Boolean(getServiceWorkerUpdate())
+          if (available) {
+            textUpdateAvailable.innerHTML = "An update is available !"
+            buttonActivateUpdate.disabled = false
+          } else {
+            textUpdateAvailable.innerHTML = ""
+            buttonActivateUpdate.disabled = true
+          }
+        })
+
+        buttonActivateUpdate.onclick = async () => {
+          buttonActivateUpdate.disabled = true
+          await activateServiceWorkerUpdate()
+        }
+      }
+    </script>
+  </body>
+</html>

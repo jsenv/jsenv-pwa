@@ -27,6 +27,7 @@
     "/main.js"
   ],
   "scripts": {
+    "start-exploring": "node ./script/start-exploring/start-exploring.js",
     "eslint-check": "node ./node_modules/eslint/bin/eslint.js .",
     "test": "node ./script/test/test.js",
     "test-with-coverage": "npm run test -- --coverage",

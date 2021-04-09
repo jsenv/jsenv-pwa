@@ -19,4 +19,6 @@ export {
   // utils
   sendMessageToServiceWorker,
   sendMessageToServiceWorkerUpdate,
+  // private
+  enableServiceWorkerLogs,
 } from "./src/navigatorController.js"

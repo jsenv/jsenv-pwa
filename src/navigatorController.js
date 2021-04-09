@@ -5,6 +5,16 @@ import { listenEvent } from "./internal/listenEvent.js"
 import { sendMessageUsingChannel } from "./internal/sendMessageUsingChannel.js"
 
 const serviceWorkerAPI = window.navigator.serviceWorker
+let logEnabled = false
+const log = (...args) => {
+  if (logEnabled) {
+    console.log(...args)
+  }
+}
+
+export const enableServiceWorkerLogs = () => {
+  logEnabled = true
+}
 
 export const canUseServiceWorker =
   Boolean(serviceWorkerAPI) && document.location.protocol === "https:"
@@ -24,13 +34,13 @@ const serviceWorkerUpdatingSetter = (worker) => {
     // it happens for manual updates where we bot detect it
     // from registration.update() return value
     // and "updatefound" event
-    console.log("we already know this worker is updating")
+    log("we already know this worker is updating")
     return
   }
   if (worker) {
-    console.log(`found a worker updating (worker state is: ${worker.state})`)
+    log(`found a worker updating (worker state is: ${worker.state})`)
   } else {
-    console.log(`worker update is done`)
+    log(`worker update is done`)
   }
   serviceWorkerUpdating = worker
   serviceWorkerUpdatingChangeSignal.emit()
@@ -62,9 +72,9 @@ export const registerServiceWorker = (url, { scope } = {}) => {
     const { installing, waiting, active } = registration
     serviceWorkerSetter(installing || waiting || active)
     removeUpdateFoundListener = listenEvent(registration, "updatefound", () => {
-      console.log("browser notifies use an worker is installing")
+      log("browser notifies use an worker is installing")
       if (registration.installing === installing) {
-        console.log(`it's not an worker update, it's first time worker registers`)
+        log(`it's not an worker update, it's first time worker registers`)
         return
       }
       serviceWorkerUpdatingSetter(registration.installing)
@@ -141,19 +151,19 @@ export const checkServiceWorkerUpdate = async () => {
 
   const { installing } = updateRegistration
   if (installing) {
-    console.log("installing worker found after calling update()")
+    log("installing worker found after calling update()")
     serviceWorkerUpdatingSetter(installing)
     return true
   }
 
   const { waiting } = updateRegistration
   if (waiting) {
-    console.log("waiting worker found after calling update()")
+    log("waiting worker found after calling update()")
     serviceWorkerUpdatingSetter(waiting)
     return true
   }
 
-  console.log("no worker found after calling update()")
+  log("no worker found after calling update()")
   return false
 }
 
