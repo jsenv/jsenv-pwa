@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/pwa",
-  "version": "3.0.6",
+  "version": "3.0.7",
   "description": "Service worker and other progressive web application helpers.",
   "license": "MIT",
   "repository": {
@@ -14,6 +14,7 @@
     "access": "public"
   },
   "type": "module",
+  "main": "./main.js",
   "exports": {
     ".": {
       "import": "./main.js"
@@ -26,14 +27,13 @@
     "/main.js"
   ],
   "scripts": {
+    "eslint-check": "node ./node_modules/eslint/bin/eslint.js .",
     "test": "node ./script/test/test.js",
     "test-with-coverage": "npm run test -- --coverage",
-    "eslint-check": "node ./node_modules/eslint/bin/eslint.js .",
     "prettier-format": "node ./script/prettier-format/prettier-format.js",
     "prettier-format-stage": "npm run prettier-format -- --staged",
     "prettier-check": "npm run prettier-format -- --dry-run",
     "upload-coverage": "node ./script/upload-coverage/upload-coverage.js",
-    "generate-comment-example": "node ./docs/generate-comment-example.js",
     "generate-import-map": "node ./script/generate-import-map/generate-import-map.js",
     "dist": "",
     "postinstall": "npm run generate-import-map",
@@ -42,16 +42,16 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "@jsenv/assert": "2.2.1",
+    "@jsenv/assert": "2.2.5",
     "@jsenv/codecov-upload": "3.4.3",
-    "@jsenv/core": "17.0.1",
-    "@jsenv/eslint-config": "12.8.0",
-    "@jsenv/file-size-impact": "6.0.2",
+    "@jsenv/core": "17.9.6",
+    "@jsenv/eslint-config": "12.9.1",
+    "@jsenv/file-size-impact": "6.0.6",
     "@jsenv/github-release-package": "1.2.2",
-    "@jsenv/node-module-import-map": "12.2.1",
-    "@jsenv/package-publish": "1.5.1",
+    "@jsenv/node-module-import-map": "13.1.0",
+    "@jsenv/package-publish": "1.5.2",
     "@jsenv/prettier-check-project": "5.6.1",
-    "eslint": "7.14.0",
+    "eslint": "7.23.0",
     "prettier": "2.2.1"
   }
 }
