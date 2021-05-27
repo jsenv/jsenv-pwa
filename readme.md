@@ -196,25 +196,17 @@ export const App = () => {
 }
 
 const ServiceWorkerView = () => {
-  const checkServiceWorkerUpdate = useCheckServiceWorkerUpdate()
   const serviceWorkerUpdate = useServiceWorkerUpdate()
 
   return (
     <fieldset>
       <legend>Update</legend>
-      {serviceWorkerUpdate ? (
-        <UpdateAvailable serviceWorkerUpdate={serviceWorkerUpdate} />
-      ) : (
-        <UpdateNotAvailable />
-      )}
+      {serviceWorkerUpdate ? <UpdateAvailable /> : <UpdateNotAvailable />}
     </fieldset>
   )
 }
 
-const UpdateAvailable = ({ serviceWorkerUpdate }) => {
-  const { shouldBecomeNavigatorController, navigatorWillReload } = serviceWorkerUpdate
-  const activateServiceWorkerUpdate = useActivateServiceWorkerUpdate()
-
+const UpdateAvailable = () => {
   const [updatingStatus, updatingStatusSetter] = React.useState("")
 
   const update = async () => {
@@ -230,22 +222,16 @@ const UpdateAvailable = ({ serviceWorkerUpdate }) => {
       <p>
         {updatingStatus === "" ? "Update available" : null}
         {updatingStatus === "updating" || updatingStatus === "activating" ? "Updating..." : null}
-        {updatingStatus === "activated" && navigatorWillReload
-          ? `Update activated, reloading...`
-          : null}
-        {updatingStatus === "activated" && !navigatorWillReload
-          ? `Update activated, reload to enable it.`
-          : null}
+        {updatingStatus === "activated" ? `Update ready, navigator will reload` : null}
       </p>
       <button disabled={Boolean(updatingStatus)} onClick={update}>
-        Update
+        Update (page will be reloaded)
       </button>
     </>
   )
 }
 
 const UpdateNotAvailable = () => {
-  const checkServiceWorkerUpdate = useCheckServiceWorkerUpdate()
   const [updateAttemptStatus, updateAttemptStatusSetter] = React.useState("")
 
   const check = async () => {
@@ -263,11 +249,11 @@ const UpdateNotAvailable = () => {
   return (
     <>
       <p>
-        {updateAttemptStatus === "fetching" ? "Recherche de mise a jour..." : null}
-        {updateAttemptStatus === "notfound" ? "Pas de mise a jour disponible." : null}
+        {updateAttemptStatus === "fetching" ? "Checking for update..." : null}
+        {updateAttemptStatus === "notfound" ? "No update available" : null}
       </p>
       <button disabled={updateAttemptStatus === "fetching"} onClick={check}>
-        Chercher
+        Check for update
       </button>
     </>
   )
@@ -281,14 +267,6 @@ const useServiceWorkerUpdate = () => {
     })
   }, [])
   return update
-}
-
-const useCheckServiceWorkerUpdate = () => {
-  return checkServiceWorkerUpdate
-}
-
-const useActivateServiceWorkerUpdate = () => {
-  return activateServiceWorkerUpdate
 }
 ```
 
