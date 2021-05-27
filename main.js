@@ -1,5 +1,5 @@
-// add to home screen
-export { listenAddToHomescreenAvailable, promptAddToHomescreen } from "./src/add-to-home-screen.js"
+export { addToHomescreen } from "./src/add-to-home-screen.js"
+
 export { displayModeStandalone } from "./src/displayModeStandalone.js"
 export { listenAppInstalled } from "./src/listenAppInstalled.js"
 

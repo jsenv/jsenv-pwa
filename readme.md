@@ -11,24 +11,7 @@ Service worker and other progressive web application helpers.
 
 - [Presentation](#Presentation)
 - [Add to home screen](#Add-to-home-screen)
-  - [listenAddToHomescreenAvailable](#listenAddToHomescreenAvailable)
-  - [promptAddToHomescreen](#promptAddToHomescreen)
-  - [displayModeStandalone](#displayModeStandalone)
 - [Service worker](#Service-worker)
-  - [Service worker code examples](#service-worker-code-examples)
-  - [Service worker registration](#Service-worker-registration)
-  - [Service worker update](#Service-worker-update)
-    - [serviceWorkerIsAvailable](#serviceWorkerIsAvailable)
-    - [checkServiceWorkerUpdate](#checkServiceWorkerUpdate)
-    - [listenServiceWorkerUpdate](#listenServiceWorkerUpdate)
-    - [getServiceWorkerUpdate](#getServiceWorkerUpdate)
-    - [activateServiceWorkerUpdate](#activateServiceWorkerUpdate)
-    - [disableAutoReloadAfterUpdate](#disableAutoReloadAfterUpdate)
-    - [autoReloadAfterUpdateIsEnabled](#autoReloadAfterUpdateIsEnabled)
-  - [Service worker capability detection](#Service-worker-capability-detection)
-  - [Service works utils](#Service-worker-utils)
-    - [sendMessageToServiceWorker](#sendMessageToServiceWorker)
-    - [sendMessageToServiceWorkerUpdate](#sendMessageToServiceWorkerUpdate)
 - [Jsenv service worker](#jsenv-service-worker)
 
 # Presentation
@@ -44,39 +27,59 @@ Service worker and other progressive web application helpers.
 
 Add to home screen means a user can choose to add a shortcut to your website in their device. The navigator will then run your website with only your ui in fullscreen.
 
-## listenAddToHomescreenAvailable
+<details>
+  <summary>addToHomescreen.isAvailable</summary>
 
-`listenAddToHomescreenAvailable` is a function that will call a callback when add to home screen becomes available or unavailable. You should use this function to decide if you can call [promptAddToHomescreen](#promptAddToHomescreen).
+`addToHomescreen.isAvailable` is a function returning a boolean indicating if addToHomescreen is available. This function must be used to know if you can call `addToHomescreen.prompt`.
 
-This function consider add to home screen as available if:
+Add to home screen is available if:
 
 - The navigator fired a `beforeinstallprompt` event
 - The code is running in a browser tab
 
+```js
+import { addToHomescreen } from "@jsenv/pwa"
+
+console.log(addToHomescreen.isAvailable())
+```
+
+</details>
+
+<details>
+  <summary>addToHomescreen.listenAvailabilityChange</summary>
+
+`addToHomescreen.listenAvailabilityChange` is a function that will call a callback when add to home screen becomes available or unavailable.
+
 The following code enable or disable a button depending if add to home screen is available or not.
 
 ```js
-import { listenAddToHomescreenAvailable } from "@jsenv/pwa"
+import { addToHomescreen } from "@jsenv/pwa"
 
-listenAddToHomescreenAvailable((addToHomescreenAvailable) => {
-  document.querySelector("button#add-to-home-screen").disabled = !addToHomescreenAvailable
+document.querySelector("button#add-to-home-screen").disabled = !addToHomescreen.isAvailable()
+addToHomescreen.listenAvailabilityChange(() => {
+  document.querySelector("button#add-to-home-screen").disabled = !addToHomescreen.isAvailable()
 })
 ```
 
-## promptAddToHomescreen
+</details>
 
-`promptAddToHomescreen` is an async function that will ask navigator to trigger a prompt to ask user if he wants to add your website to their homescreen. It resolves to a boolean indicating if users accepted or declined the prompt.
+<details>
+  <summary>addToHomescreen.prompt</summary>
+
+`addToHomescreen.prompt` is an async function that will ask navigator to trigger a prompt to ask user if he wants to add your website to their homescreen. It resolves to a boolean indicating if users accepted or declined the prompt.
 
 It can be called many times but always inside a user interaction event handler, such as a click event.
 
 ```js
-import { promptAddToHomescreen } from "@jsenv/pwa"
+import { addToHomescreen } from "@jsenv/pwa"
 
 document.querySelector("button#add-to-home-screen").onclick = async () => {
-  const accepted = await promptAddToHomescreen()
-  alert(`user choice: ${promptAddToHomescreen}`)
+  const accepted = await addToHomescreen.prompt()
+  alert(`user choice: ${accepted}`)
 }
 ```
+
+</details>
 
 ## displayModeStandalone
 

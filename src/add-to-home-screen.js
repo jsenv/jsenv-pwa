@@ -27,98 +27,84 @@ import { listenEvent } from "./internal/listenEvent.js"
 import { listenAppInstalled } from "./listenAppInstalled.js"
 import { displayModeStandalone } from "./displayModeStandalone.js"
 
-export const listenAddToHomescreenAvailable = (callback) => {
-  let availablePrevious
-  let appInstalledEvent = false
-  const checkAvailable = ({
-    beforeinstallpromptEventAvailableOnWindow,
-    displayModeIsStandalone,
-  }) => {
-    const available = addToHomescreenAvailableGetter({
-      beforeinstallpromptEventAvailableOnWindow,
-      displayModeIsStandalone,
-      appInstalledEvent,
-    })
-    if (available !== availablePrevious) {
-      availablePrevious = available
-      callback(available)
+let appInstalledEvent = false
+
+listenAppInstalled(() => {
+  // prompt "becomes" unavailable if user installs app
+  // it can happen if user installs app manually from browser toolbar
+  // in that case there is no point showing the install
+  // button in the ui
+  appInstalledEvent = true
+})
+
+export const addToHomescreen = {
+  isAvailable: () => {
+    if (!window.beforeinstallpromptEvent) {
+      return false
     }
-  }
 
-  checkAvailable({
-    beforeinstallpromptEventAvailableOnWindow: beforeinstallpromptEventAvailableOnWindowGetter(),
-    displayModeIsStandalone: displayModeStandalone.get(),
-  })
+    if (displayModeStandalone.get()) {
+      return false
+    }
 
-  const removeBeforeInstallPromptListener = listenBeforeInstallPrompt(
-    (beforeinstallpromptEvent) => {
-      window.beforeinstallpromptEvent = beforeinstallpromptEvent
-      checkAvailable({
-        beforeinstallpromptEventAvailableOnWindow: true,
-        displayModeIsStandalone: displayModeStandalone.get(),
-      })
-    },
-  )
+    if (appInstalledEvent) {
+      return false
+    }
 
-  const removeDisplayModeListener = displayModeStandalone.listen(() => {
-    checkAvailable({
-      beforeinstallpromptEventAvailableOnWindow: beforeinstallpromptEventAvailableOnWindowGetter(),
-      displayModeIsStandalone: displayModeStandalone.get(),
-    })
-  })
-
-  const removeAppInstalledListener = listenAppInstalled(() => {
-    // prompt "becomes" unavailable if user installs app
-    // it can happen if user installs app manually from browser toolbar
-    // in that case there is no point showing the install
-    // button in the ui
-    appInstalledEvent = true
-    checkAvailable({
-      beforeinstallpromptEventAvailableOnWindow: beforeinstallpromptEventAvailableOnWindowGetter(),
-      displayModeIsStandalone: displayModeStandalone.get(),
-    })
-  })
-
-  return () => {
-    removeBeforeInstallPromptListener()
-    removeDisplayModeListener()
-    removeAppInstalledListener()
-  }
-}
-
-export const promptAddToHomescreen = async () => {
-  if (!window.beforeinstallpromptEvent) {
-    console.warn(`cannot promptAddToHomescreen: window.beforeinstallpromptEvent is missing`)
-    return false
-  }
-
-  window.beforeinstallpromptEvent.prompt()
-  const choiceResult = await window.beforeinstallpromptEvent.userChoice
-  if (choiceResult.outcome === "accepted") {
     return true
-  }
-  return false
-}
+  },
 
-const beforeinstallpromptEventAvailableOnWindowGetter = () => {
-  return Boolean(window.beforeinstallpromptEvent)
-}
+  listenAvailabilityChange: (callback) => {
+    let availablePrevious = addToHomescreen.isAvailable()
 
-const addToHomescreenAvailableGetter = ({
-  beforeinstallpromptEventAvailableOnWindow,
-  displayModeIsStandalone,
-  appInstalledEvent,
-}) => {
-  if (!beforeinstallpromptEventAvailableOnWindow) {
+    const checkAvailabilityChange = () => {
+      const available = addToHomescreen.isAvailable()
+      if (available !== availablePrevious) {
+        availablePrevious = available
+        callback(available)
+      }
+    }
+
+    const removeBeforeInstallPromptListener = listenBeforeInstallPrompt(
+      (beforeinstallpromptEvent) => {
+        window.beforeinstallpromptEvent = beforeinstallpromptEvent
+        checkAvailabilityChange()
+      },
+    )
+
+    const removeDisplayModeListener = displayModeStandalone.listen(() => {
+      checkAvailabilityChange()
+    })
+
+    const removeAppInstalledListener = listenAppInstalled(() => {
+      // prompt "becomes" unavailable if user installs app
+      // it can happen if user installs app manually from browser toolbar
+      // in that case there is no point showing the install
+      // button in the ui
+      appInstalledEvent = true
+      checkAvailabilityChange()
+    })
+
+    return () => {
+      removeBeforeInstallPromptListener()
+      removeDisplayModeListener()
+      removeAppInstalledListener()
+    }
+  },
+
+  prompt: async () => {
+    if (!window.beforeinstallpromptEvent) {
+      console.warn(`cannot prompt add to home screen: window.beforeinstallpromptEvent is missing`)
+      return false
+    }
+
+    window.beforeinstallpromptEvent.prompt()
+    const choiceResult = await window.beforeinstallpromptEvent.userChoice
+    if (choiceResult.outcome === "accepted") {
+      return true
+    }
     return false
-  }
-  if (displayModeIsStandalone) {
-    return false
-  }
-  if (appInstalledEvent) {
-    return false
-  }
-  return true
+  },
 }
 
 const listenBeforeInstallPrompt = (callback) => listenEvent(window, "beforeinstallprompt", callback)
