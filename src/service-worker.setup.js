@@ -26,11 +26,11 @@ self.config.manualUrlsConfig = {
 
 /*
  * Decides if the request will be handled by the service worker or not.
- * When returning true, the response for that request will be read from cache
- * or put fetched from network and put into cache.
- * When returning false, the default behaviour applies, as if service worker did not exists.
+ * When returning true, the response for that request will come from cache. If not cached
+ * response is fetched from network and put into cache.
+ * When returning false, the default navigator behaviour applies, as if there was no service worker.
  *
- * Ths implementation below means only GET or HEAD requests cached during install
+ * The implementation below means only GET or HEAD requests cached during install
  * are handled by the service worker.
  */
 self.config.shouldHandleRequest = (request, { requestWasCachedOnInstall }) => {
