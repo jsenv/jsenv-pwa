@@ -28,20 +28,60 @@ Service worker and other progressive web application helpers.
 Add to home screen means a user can choose to add a shortcut to your website in their device. The navigator will then run your website with only your ui in fullscreen.
 
 <details>
+  <summary>Add to home screen code example</summary>
+
+The following html displays a button enabled when add to home screen is available. Clicking on the button prompt user to add the website to home screen.
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <button id="add-to-home-screen" disabled>Add to home screen</button>
+    <script type="module">
+      import { addToHomescreen } from "@jsenv/pwa"
+
+      const button = document.querySelector("button#add-to-home-screen")
+
+      button.disabled = !addToHomescreen.isAvailable()
+      addToHomescreen.listenAvailabilityChange(() => {
+        document.querySelector(
+          "button#add-to-home-screen",
+        ).disabled = !addToHomescreen.isAvailable()
+      })
+      button.onclick = () => {
+        addToHomescreen.prompt()
+      }
+    </script>
+    <!--
+    "beforeinstallprompt" event might be dispatched very quickly by the navigator, before
+    <script type="module"> above got a chance to catch it. For this reason, we listen
+    early for this event and store it into window.beforeinstallpromptEvent.
+    When "@jsenv/pwa" is imported it will check window.beforeinstallpromptEvent existence.
+    -->
+    <script>
+      window.addEventListener("beforeinstallprompt", (beforeinstallpromptEvent) => {
+        beforeinstallpromptEvent.preventDefault()
+        window.beforeinstallpromptEvent = beforeinstallpromptEvent
+      })
+    </script>
+  </body>
+</html>
+```
+
+</details>
+
+<details>
   <summary>addToHomescreen.isAvailable</summary>
 
 `addToHomescreen.isAvailable` is a function returning a boolean indicating if addToHomescreen is available. This function must be used to know if you can call `addToHomescreen.prompt`.
 
-Add to home screen is available if:
-
-- The navigator fired a `beforeinstallprompt` event
-- The code is running in a browser tab
-
-```js
-import { addToHomescreen } from "@jsenv/pwa"
-
-console.log(addToHomescreen.isAvailable())
-```
+Add to home screen is available if navigator fired a `beforeinstallprompt` event
 
 </details>
 
@@ -49,17 +89,6 @@ console.log(addToHomescreen.isAvailable())
   <summary>addToHomescreen.listenAvailabilityChange</summary>
 
 `addToHomescreen.listenAvailabilityChange` is a function that will call a callback when add to home screen becomes available or unavailable.
-
-The following code enable or disable a button depending if add to home screen is available or not.
-
-```js
-import { addToHomescreen } from "@jsenv/pwa"
-
-document.querySelector("button#add-to-home-screen").disabled = !addToHomescreen.isAvailable()
-addToHomescreen.listenAvailabilityChange(() => {
-  document.querySelector("button#add-to-home-screen").disabled = !addToHomescreen.isAvailable()
-})
-```
 
 </details>
 
@@ -69,15 +98,6 @@ addToHomescreen.listenAvailabilityChange(() => {
 `addToHomescreen.prompt` is an async function that will ask navigator to trigger a prompt to ask user if he wants to add your website to their homescreen. It resolves to a boolean indicating if users accepted or declined the prompt.
 
 It can be called many times but always inside a user interaction event handler, such as a click event.
-
-```js
-import { addToHomescreen } from "@jsenv/pwa"
-
-document.querySelector("button#add-to-home-screen").onclick = async () => {
-  const accepted = await addToHomescreen.prompt()
-  alert(`user choice: ${accepted}`)
-}
-```
 
 </details>
 
