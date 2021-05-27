@@ -6,25 +6,32 @@ Jsenv service worker goal is to make the website capable to work offline.
 
 # How to use
 
-- Install `@jsenv/pwa` in your dependencies
+<details>
+  <summary>1. Install <code>@jsenv/pwa</code></summary>
 
 ```console
 npm install @jsenv/pwa
 ```
 
-- Create a `service-worker.js` file
+</details>
+
+<details>
+  <summary>2. Create <code>service-worker.js</code></summary>
 
 ```js
-/* globals self, config */
+/* globals self */
 
 self.importScripts("./node_modules/@jsenv/pwa/src/service-worker.setup.js")
 
-config.cachePrefix = "product-name"
+self.config.cachePrefix = "product-name"
 
 self.importScripts("./node_modules/@jsenv/pwa/src/service-worker.main.js")
 ```
 
-- Register this service worker somewhere
+</details>
+
+<details>
+  <summary>3. Register service worker</summary>
 
 ```js
 import { registerServiceWorker } from "@jsenv/pwa"
@@ -32,18 +39,19 @@ import { registerServiceWorker } from "@jsenv/pwa"
 registerServiceWorker("./service-worker.js")
 ```
 
-> You can use `window.navigator.serviceWorker.register` if you don't want to use `registerServiceWorker`.
+You can also use `window.navigator.serviceWorker.register` instead of `registerServiceWorker`.
 
-With this code jsenv service worker will be registered in your website. By default it will only cache the root url: `/`. It must be configured to cache more urls.
+</details>
+
+At this point your website will use jsenv service worker. By default jsenv service worker cache only the root url (`/`). It must be configured to cache more urls.
 
 # Configuration
 
-Jsenv service worker must be configured between the two `importScripts` calls we saw on the previous part.
+Jsenv service worker must be configured between the two `importScripts` calls visible in `service-worker.js` from the previous part.
 
-Remember `config.cachePrefix = "product-name"` ?
-Here you can configure more things to tell the service worker what to do.
+Just after the line `self.config.cachePrefix = "product-name"` you can add more lines to tell the service worker how to behave.
 
-For now this documentation is living in the code itself. Check directly [src/service-worker.setup.js](../src/service-worker.setup.js) to see the available configuration and what it does.
+Check directly [src/service-worker.setup.js](../src/service-worker.setup.js) to see the available configuration and what it does.
 
 <!-- https://github.com/jsenv/jsenv-core/blob/master/docs/building/readme.md
 It can be used independently from jsenv. If you are using jsenv to build your project, jsenv will also build your service workers files if you ask him to. In that case jsenv injects all urls into `self.jsenvBuildDynamicUrls` meaning your service worker knows url to cache automatically. -->
