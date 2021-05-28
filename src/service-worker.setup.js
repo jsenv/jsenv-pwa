@@ -2,6 +2,12 @@
 
 self.config = {}
 
+/*
+ * cachePrefix is used to generate a unique cache name in the navigator such as:
+ * "jsenvjld2cjxh0000qzrmn831i7rn"
+ * The prefix is used to identify which cache have been created by this service worker
+ * so that the next service worker can cleanup cache.
+ */
 self.config.cachePrefix = `jsenv`
 
 /*
@@ -59,11 +65,21 @@ self.config.shouldHandleRequest = (request, { requestWasCachedOnInstall }) => {
 self.config.shouldCleanOnActivate = (response, request, { requestWasCachedOnInstall }) =>
   !requestWasCachedOnInstall
 
+/**
+ * logLevel can be "debug", "info", "warn", "error"
+ */
 self.config.logLevel = "warn"
 self.config.logsBackgroundColor = "#ffdc00" // nice yellow
 
+/**
+ * navigationPreloadEnabled is experimental
+ */
 self.config.navigationPreloadEnabled = false
 
+/**
+ * actions can be used to create code that can be executed in the service worker
+ * when parent page ask him to do so. It's for super advanced use cases.
+ */
 self.config.actions = {
   ping: () => "pong",
 }

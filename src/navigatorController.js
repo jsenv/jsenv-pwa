@@ -107,13 +107,14 @@ export const registerServiceWorker = (url, { scope } = {}) => {
 //   }
 // }
 
-// For now this function will try to communicate with the old service worker
-// even if new worker is activating or activated.
-// It might not work because, from what I understood, the old worker gets killed
-// by the navigator as soon as the new worker starts to activate.
-// Maybe it should communicate with the new worker as soon as we know
-// updating worker is activating or activated.
-// -> yes
+/*
+ * sendMessageToServiceWorker communicates with the current service worker.
+ *
+ * As soon as a new worker is activating, the current service worker
+ * becomes the new one and sendMessageToServiceWorker communicate with it.
+ * This is because browser kills the old service worker as soon as a new worker
+ * version starts to activate
+ */
 export const sendMessageToServiceWorker = (message) => {
   if (!serviceWorker) {
     console.warn(`no service worker to send message to`)
